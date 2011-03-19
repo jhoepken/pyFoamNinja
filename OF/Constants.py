@@ -11,7 +11,8 @@ Gravity acceleration :math:`[g] = \\frac{m}{s^2}`.
 
 water = {
     'nu' : 1.004e-6,
-    'mu' : 1.002e-3
+    'mu' : 1.002e-3,
+    'rho': 1000
     }
 """
 Properties of sweet water at :math:`T=20^\circ`
