@@ -1,6 +1,6 @@
 from math import log,sqrt
 from OF import Constants
-from OF.Basic import Utilities
+from OF.Basic import Utilities,FlowProperties
 """
 This package contains various skin friction curves, that are used in naval
 architecture. All definitions should be based on the Reynoldsnumber as well as
@@ -41,7 +41,7 @@ def ittc57(Re=None,
     """
     # Calculate the number of undefined parameters. Maybe this should be
     # improved by using the argument pointers of python (kwargs**) etc.
-    pCount = Utilities.countFalse([v,Re,Fr])
+    pCount = [v,Re,Fr].count(None)
 
     if not v and not Re and not Fr:
         raise ValueError("Neither v nor Re and Fr have been provided")
@@ -52,13 +52,13 @@ def ittc57(Re=None,
         if not L:
             raise ValueError("A length has to be passed, as the Reynoldsnumber \
                              needs to be computed")
-        Re = float(v)*float(L)/nu
+        Re = FlowProperties.Re(v=v, L=L)
     elif Re:
         Re = float(Re)
 
     elif Fr:
-        v = float(Fr)*sqrt(Constants.g*float(L))
-        Re = v*L/nu
+        v = FlowProperties.Fr(Fr=Fr,L=L)
+        Re = FlowProperties.Re(v=v, L=L)
 
     return 0.075/((log(Re)-2)**2)
 

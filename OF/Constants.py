@@ -9,9 +9,12 @@ Gravity acceleration :math:`[g] = \\frac{m}{s^2}`.
 :type: float
 """
 
-nuWater = 1e-6
+water = {
+    'nu' : 1.004e-6,
+    'mu' : 1.002e-3
+    }
 """
-Kinematic viscosity of water
+Properties of sweet water at :math:`T=20^\circ`
 
 :type: float
 """
