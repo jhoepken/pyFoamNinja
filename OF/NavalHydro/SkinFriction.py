@@ -1,101 +1,80 @@
 from math import log,sqrt
 from OF import Constants
-from OF.Basic import Utilities,FlowProperties
+from OF.Basic import FlowProperties
 """
 This package contains various skin friction curves, that are used in naval
 architecture. All definitions should be based on the Reynoldsnumber as well as
 on the velocity and the Froude number.
 """
 
-def forceCoeff(F,
-        Swett,
-        v=None,
-        Re=None,
-        Fr=None,
-        **kwargs):
-    """
-    Calculates the force coefficient by
-
-    ..math::
-
-        C = \\frac{F}{0.5\\rho S_{wett} v^2}
-
-    :param F: Force
-    :type F: float
-    :param Swett: Wetted surface area
-    :type Swett: float
-    :param v: Velocity
-    :type v: float
-    :param Re: Reynoldsnumber
-    :type Re: float
-    :param Fr: Froudenumber
-    :type Fr: float
-
-    :rtype: float
-
-    :Author: Jens Hoepken <jhoepken@gmail.com>
-    """
-
-
-    if not 'rho' in kwargs.iterkeys():
-        rho = Constants.water['rho']
-    else:
-        rho = kwargs['rho']
-
-    if Re:
-        v = FlowProperties.Re(Re=Re,L=kwargs['L'])
-    elif Fr:
-        v = FlowProperties.Fr(Fr=Fr,L=kwargs['L'])
-
-
-    return F/(0.5*rho*Swett*v**2)
-
-
-def ittc57(Re=None,
-            v=None,
-            Fr=None,
-            L=None,
-            nu=1e-6):
+def ittc57(**kwargs):
     """
     Calculates the viscous drag coefficient :math:`C_D` for the skin friction 
     according to the ITTC'57 correlation line, which already accounts for 
     approximately 12% of pressure induced friction and should therefore 
     overestimate the skin friction of e.g. a plain turbulent plate.
 
+    ..math::
+
+        C_F = \\frac{0.075}{(\log Re - 2)^2}
+
+    It is not necessary to hand a Reynoldsnumber to the function. If a velocity
+    or Froudenumber and a reference length is passed, the Reynoldsnumber is
+    derived accordingly.
+
     :param Re: Reynoldsnumber
     :type Re: float
+    :param Fr: Froudenumber
+    :type Fr: float
     :param v: Velocity :math:`[\\frac{m}{s}]`
     :type v: float
     :param L: Reference length :math:`[m]`
     :type L: float
-    :param nu: Kinematic viscosity (Default = :math:`10^{-6}`)
-    :type nu: float
 
     :rtype: float
 
     :Author: Jens Hoepken <jhoepken@gmail.com>
     """
-    # Calculate the number of undefined parameters. Maybe this should be
-    # improved by using the argument pointers of python (kwargs**) etc.
-    pCount = [v,Re,Fr].count(None)
-
-    if not v and not Re and not Fr:
-        raise ValueError("Neither v nor Re and Fr have been provided")
-    elif pCount < 2 :
-        raise ValueError("Too many velocity definitions (Re, v, Fr)")
-
-    if v:
-        if not L:
-            raise ValueError("A length has to be passed, as the Reynoldsnumber \
-                             needs to be computed")
-        Re = FlowProperties.Re(v=v, L=L)
-    elif Re:
-        Re = float(Re)
-
-    elif Fr:
-        v = FlowProperties.Fr(Fr=Fr,L=L)
-        Re = FlowProperties.Re(v=v, L=L)
+    if 'Re' in kwargs.iterkeys():
+        Re = kwargs['Re']
+    else:
+        v,Fr,Re = FlowProperties.vFrRe(**kwargs)
 
     return 0.075/((log(Re)-2)**2)
 
+def huges(**kwargs):
+    """
+    Calculates the viscous drag coefficient :math:`C_{F0}` for the skin friction
+    according to the Hughes line. This is not used on a regular basis by the
+    model basins, but for simulations dealing with the turbulent flow over e.g.
+    a flat plate, this curve gives more accurate results to compare the CFD
+    results to.
 
+    ..math::
+
+        C_{F0} = \\frac{0.066}{(\log Re - 2.03)^2}
+
+    It is not necessary to hand a Reynoldsnumber to the function. If a velocity
+    or Froudenumber and a reference length is passed, the Reynoldsnumber is
+    derived accordingly.
+
+    :param Re: Reynoldsnumber
+    :type Re: float
+    :param Fr: Froudenumber
+    :type Fr: float
+    :param v: Velocity :math:`[\\frac{m}{s}]`
+    :type v: float
+    :param L: Reference length :math:`[m]`
+    :type L: float
+
+    :rtype: float
+
+    :Author: Jens Hoepken <jhoepken@gmail.com>
+    """
+
+    if 'Re' in kwargs.iterkeys():
+        Re = kwargs['Re']
+    else:
+        v,Fr,Re = FlowProperties.vFrRe(v=v,Fr=Fr,Re=Re,L=L,**kwargs)
+        
+    return 0.066/((log(Re)-2.03)**2)
