@@ -7,6 +7,7 @@ class dataFile():
     style, similar to the ``forces`` and ``forceCoeffs`` output.
 
     :Author: Jens Hoepken <jhoepken@gmail.com>
+    :Author: Tomislav Maric <tomislav.maric@gmx.com>
     """
 
     path = None
@@ -48,40 +49,6 @@ class dataFile():
 	the file. Skips all lines that start with a comment symbol.
         """
 
-        #data = False
-
-        #blackList = [
-        #                ")",
-        #                "(",
-        #                "\n",
-        #                "\t"
-        #            ]
-
-        #lineCounter = 0
-        #for line in self.file:
-        #    if not "#" in line: #lineCounter > 0:
-        #        
-        #        for bI in blackList:
-        #            line = line.replace(bI,"")
-
-        #        columns = line.split(" ")
-
-        #        if not data:
-        #            data = columns
-        #            i = 0
-        #            while i < len(data):
-        #                data[i] = [float(data[i])]
-        #                i += 1
-
-        #        else:
-        #            i = 0
-        #            for cI in columns:
-        #                data[i].append(float(cI))
-        #                i += 1
-
-        #    lineCounter += 1
-
-        # List for the data.
 	data = []
 
         # Regular expression for a number: integer, float, double with support
