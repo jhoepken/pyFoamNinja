@@ -1,6 +1,7 @@
 from math import log,sqrt
 from OF import Constants
-from OF.Basic import Utilities,FlowProperties
+#from OF.Basic import Utilities,FlowProperties
+from OF.Basic import FlowProperties
 """
 This package contains various skin friction curves, that are used in naval
 architecture. All definitions should be based on the Reynoldsnumber as well as
