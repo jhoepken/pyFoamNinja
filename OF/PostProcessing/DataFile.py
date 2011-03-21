@@ -1,4 +1,5 @@
 import numpy
+import re
 
 class dataFile():
     """
@@ -43,43 +44,61 @@ class dataFile():
 
     def parse(self):
         """
-        Strips all tabs, linebreaks and round brackets from the content and
-        rearranges it as a nested list. Each entry of the list represents a
-        column of the data file. If any line contains a sharp sign, the
-        line is skipped.
+        Uses regular expressions to extract a list of numbers from the lines in
+	the file. Skips all lines that start with a comment symbol.
         """
 
-        data = False
+        #data = False
 
-        blackList = [
-                        ")",
-                        "(",
-                        "\n",
-                        "\t"
-                    ]
+        #blackList = [
+        #                ")",
+        #                "(",
+        #                "\n",
+        #                "\t"
+        #            ]
 
-        lineCounter = 0
-        for line in self.file:
-            if not "#" in line: #lineCounter > 0:
-                
-                for bI in blackList:
-                    line = line.replace(bI,"")
+        #lineCounter = 0
+        #for line in self.file:
+        #    if not "#" in line: #lineCounter > 0:
+        #        
+        #        for bI in blackList:
+        #            line = line.replace(bI,"")
 
-                columns = line.split(" ")
+        #        columns = line.split(" ")
 
-                if not data:
-                    data = columns
-                    i = 0
-                    while i < len(data):
-                        data[i] = [float(data[i])]
-                        i += 1
+        #        if not data:
+        #            data = columns
+        #            i = 0
+        #            while i < len(data):
+        #                data[i] = [float(data[i])]
+        #                i += 1
 
-                else:
-                    i = 0
-                    for cI in columns:
-                        data[i].append(float(cI))
-                        i += 1
+        #        else:
+        #            i = 0
+        #            for cI in columns:
+        #                data[i].append(float(cI))
+        #                i += 1
 
-            lineCounter += 1
+        #    lineCounter += 1
+
+        # List for the data.
+	data = []
+
+        # Regular expression for a number: integer, float, double with support
+	# for scientific notation.
+	numberRe = re.compile(r"[+-]? *(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?")
+	# Possible line comments.
+        lineComments = ("//", "%","#") 
+
+	for line in self.file:
+	    # Remove the whitespace on the left of the line.
+	    line = line.lstrip()
+	    if not line.startswith(lineComments):
+		# re.findall returns a list of strings that are to be mapped
+		# into float values by the "map" builtin function.
+		# The result will be a list of numbers that are added to the
+		# data list.
+		data.append(map(lambda number: float(number),
+		            re.findall(numberRe,line)));
 
         self.file = data
