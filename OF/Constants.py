@@ -17,5 +17,9 @@ water = {
 """
 Properties of sweet water at :math:`T=20^\circ`
 
-:type: float
+:type: dict
 """
+
+turbulence = {
+    'I' : 0.05
+    }
