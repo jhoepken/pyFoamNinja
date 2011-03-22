@@ -10,14 +10,15 @@ class dataFile():
     :Author: Tomislav Maric <tomislav.maric@gmx.com>
     """
 
-    path = None
+    _path = None
     """
     Path to the data file
 
     :type: string
     """
 
-    file = None
+    _fileData = None
+
     """
     Content of the file, read via :meth:`readlines()`
 
@@ -30,26 +31,30 @@ class dataFile():
         :type path: string
         """
 
-        self.path = path
+        self._path = path
 
         # Read the data file via readlines and store the content
-        tmpFile = open(path,"r")
-        self.file = tmpFile.readlines()
-        tmpFile.close()
-        del tmpFile
-
+        # tmpFile = open(path,"r")
+	# No need for explicit garbage collection, automatic variable dies
+	# anyway and the handle is given to _fileData: this is faster, I 
+	# have tested it out. 
+        self._fileData = open(path,"r").readlines()
+        #tmpFile.close()
+        # del tmpFile
         self.parse()
 
     def __getitem__(self,key):
-        return numpy.array(self.file[key])
+	# Here there was numpy.array(self.file[key]), but it makes no sense to
+	# coerce the data type each time a [] operator is called, it is better
+	# to do it during the construction by the parse(self) method. 
+        return self._fileData[key]
 
     def parse(self):
         """
         Uses regular expressions to extract a list of numbers from the lines in
 	the file. Skips all lines that start with a comment symbol.
         """
-
-	data = []
+	parsedData = []
 
         # Regular expression for a number: integer, float, double with support
 	# for scientific notation.
@@ -57,7 +62,7 @@ class dataFile():
 	# Possible line comments.
         lineComments = ("//", "%","#") 
 
-	for line in self.file:
+	for line in self._fileData:
 	    # Remove the whitespace on the left of the line.
 	    line = line.lstrip()
 	    if not line.startswith(lineComments):
@@ -65,7 +70,9 @@ class dataFile():
 		# into float values by the "map" builtin function.
 		# The result will be a list of numbers that are added to the
 		# data list.
-		data.append(map(lambda number: float(number),
-		            re.findall(numberRe,line)));
+		parsedData.append(map(lambda number: float(number),
+		                  re.findall(numberRe,line)));
 
-        self.file = data
+        # Overwrite the file raw ASCII data with the numpy.array object that
+	# is a result of the data mining. 
+        self._fileData = numpy.array(parsedData)
