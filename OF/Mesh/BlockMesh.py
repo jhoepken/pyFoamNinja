@@ -18,8 +18,6 @@ class blockMesh:
         self.blocks = blocks
         self.patches = patches
 
-    def findNeighbours(self):
-        pass
 
     def patchEntries(self):
         output = []
@@ -29,22 +27,26 @@ class blockMesh:
 
         return output
 
-    def getVertexOrder(self,v):
-        for vI in v.allVertices():
-            if vI.x == v.x and vI.y == v.y and vI.z == v.z and vI.id != v.id:
-                return v.order
 
     def getVertices(self):
         output = []
-        i = 0
-        for blockI in self.blocks:
-            for vI in blockI.vertices:
-                if not vI.duplicate:
-                    output.append(vI)
-                    vI.order = i
-                    i += 1
-                else:
-                    vI.order = self.getVertexOrder(vI)
+
+        for vI in self.blocks[0].vertices[0].allVertices():
+            output.append(vI)
+
+
+        #for blockI in self.blocks:
+            #for vI in blockI.vertices:
+                #if not vI.duplicate and not vI in output:
+                    #output.append(vI)
+                    #vI.order = i
+                    #
+                    #for vJ in vI.allVertices():
+                        #if vJ == vI:
+                            #print vI
+                            #vJ.order = i
+
+                    #i += 1
 
         return output
 
@@ -170,13 +172,21 @@ class block:
 
         # Create from 8 vertices
         if isinstance(vertices,list) and len(vertices) == 8:
+            print "Constructing block from 8 vertices"
             self.vertices = vertices
 
         # Create from bounding box
         elif isinstance(vertices,list) and len(vertices) == 2:
+            print "Constructing block from 2 vertices"
             self.vertices = boundingBox(vertices[0],vertices[1])
-            from pprint import pprint
-            pprint(self.vertices)
+
+        else:
+            raise ValueError("Incorrect numbers of vertices passed to create a block")
+            
+            
+        from pprint import pprint
+        print "Vertices in Block:"
+        pprint(self.vertices)
 
         self.generateFaces()
 
@@ -286,50 +296,105 @@ def boundingBox(minV,maxV):
 class vertex(Vector):
     """
     Representation of a vertex, inherits
-    :class:`PyFoam.Basics.DataStructures.Vector`, but stores the vertex
-    coordinates in a global list, which can be accessed from all instances of
-    this class.
+    :class:`PyFoam.Basics.DataStructures.Vector`, all each instance of itself in
+    an internal list. By doing that, no extra class for the vertex list handling
+    must be implemented and duplicate vertices can be handled in a fairly
+    straight forward manner.
     """
 
     vertexCount = -1
+    """
+    Global counter for all existing vertices
+
+    :type: int
+    """
 
     id = 0
-
-    duplicate = False
     """
-    Stores the id of the dublicate vertex, if one exists. Otherwise this
-    property is ``False``
+    Id of the vertex
 
-    :type: bool/int
+    :type: int
     """
 
     list = []
+    """
+    Global list, where all existing vertices are stored in.
+
+    :type: list
+    """
 
     def __init__(self, x, y, z): 
+        """
+        :param x: x coordinate
+        :type x: float
+        :param y: y coordinate
+        :type y: float
+        :param z: z coordinate
+        :type z: float
+        """
+        # Ensure floats for the coordinates
         x = float(x)
         y = float(y)
         z = float(z)
 
         self.order = -1
+        """
+        Stores the order of this vertex in the output for blockMesh.
 
-        if not self.exists(x,y,z):
-            self.id = self.__class__.vertexCount + 1
-            self.__class__.vertexCount += 1
+        :type: int
+        """
+        
+        self.duplicate = False
+        """
+        Indicates whether a vertex at these coordinates does already exist or
+        not.
 
-            self.__class__.list.append(self)
+        :type: bool
+        """
 
-        else:
-            self.id = self.exists(x,y,z)
-            self.duplicate = True
-
+        # Construct parent vector class
         Vector.__init__(self,x,y,z)
 
+        # Register the coordinates
         self.x = x
         self.y = y
         self.z = z
 
+        # If no vertex at the specified coordinates exist, it gets constructed,
+        # the global counter is increased accordingly and the id is assigned.
+        # The vertex is appended to the global vertex list
+        if not self.exists(x,y,z):
+            self.id = self.__class__.vertexCount + 1
+            self.__class__.vertexCount += 1
+            self.duplicate = False
+
+        # If the vertex does exist, clone it and set the duplicate to True
+        else:
+            self = self.exists(x,y,z)
+            self.duplicate = True
+            print "Vertex does already exist. ", self.order
+
+        self.__class__.list.append(self)
+        self.ensureOrder()
+            
+
+    def ensureOrder(self):
+        i = 0
+
+        for vI in self.list:
+            exists = False
+            for vJ in self.list:
+                if vI == vJ and vI.id != vJ.id and vI.duplicate:
+                    vI.order = vJ.order
+                    exists = True
+                else:
+                    vI.order = i
+            if not exists:
+                i += 1
+
+
     def __repr__(self):
-        return "%i\t(%f %f %f)" %(self.id,self.x,self.y,self.z)
+        return "%i,%i\t(%f %f %f)" %(self.id,self.order,self.x,self.y,self.z)
 
     def __eq__(self,other):
         if self.x == other.x and self.y == other.y and self.z == other.z:
@@ -343,6 +408,5 @@ class vertex(Vector):
     def exists(self,x,y,z):
         for lI in self.__class__.list:
             if (lI.x == x) and (lI.y == y) and (lI.z == z):
-                return lI.id
-
+                return lI
         return False

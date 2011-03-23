@@ -22,18 +22,29 @@ b = [
     BlockMesh.vertex(1,1,5.32213)
 ]
 
+c = [
+    a[1],
+    BlockMesh.vertex(3,1,1)
+]
+
 block1 = BlockMesh.block(a,[2,10,20])
 block2 = BlockMesh.block(b,[2,10,20])
-#block3 = block(c)
+block3 = BlockMesh.block(c,[2,10,20])
+
+from pprint import pprint
+pprint(a[0].list)
+print "///"
+for vI in a[0].allVertices():
+    print vI.order,vI
+print "///"
+
 
 #inlet = patch("INLET",[block1.faces[0]])
 #print inlet
 
-mesh = BlockMesh.blockMesh(case,[block1,block2],[])
+mesh = BlockMesh.blockMesh(case,[block1,block2,block3],[])
 mesh.write()
 
-from pprint import pprint
-pprint(a[4].allVertices())
 
 
 #grmpf = ParsedBlockMeshDict("/home/hoepken/OpenFOAM/OpenFOAM-1.6-ext/tutorials/incompressible/simpleFoam/pitzDaily/constant/polyMesh/blockMeshDict")
