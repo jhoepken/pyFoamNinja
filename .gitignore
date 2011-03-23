@@ -2,3 +2,5 @@ build/
 *.pyc
 
 *.swp
+
+PlyParser_FoamFileParser_parsetab*
