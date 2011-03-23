@@ -44,10 +44,8 @@ class dataFile():
         self.parse()
 
     def __getitem__(self,key):
-	# Here there was numpy.array(self.file[key]), but it makes no sense to
-	# coerce the data type each time a [] operator is called, it is better
-	# to do it during the construction by the parse(self) method. 
-        return self._fileData[key]
+	# Get the column data from the _fileData array.
+	return self._fileData[:,key]
 
     def parse(self):
         """
