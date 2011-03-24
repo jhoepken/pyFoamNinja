@@ -47,6 +47,11 @@ class blockMesh:
         self.blocks += blocks
         self.vertices = blocks[0].vertices
 
+    def check(self):
+        for bI in self.blocks:
+            print bI.neighbours
+            bI.checkNodes()
+
     def getVertices(self):
         """
         Returns all vertices, but filters the ones which are only a reference.
@@ -82,6 +87,8 @@ class blockMesh:
 
 
     def write(self):
+        self.check()
+
         target = join(self.case.polyMeshDir(),"blockMeshDict")
 
         template = TemplateFile(content="""
@@ -255,13 +262,29 @@ class block:
             
         self.generateFaces()
         self.findNeighbour()
-        
 
     def __eq__(self,other):
         if self.id == other.id:
             return True
         else:
             return False
+
+    def checkNodes(self):
+        for dir,bNeighbourId in self.neighbours.iteritems():
+            if not isinstance(bNeighbourId,bool):
+                if dir == 0 or dir == 1:
+                    if self.list[bNeighbourId].nodes[1] != self.nodes[1] or \
+                       self.list[bNeighbourId].nodes[2] != self.nodes[2]:
+                        raise ValueError("Nodes on edge mismatch")
+                elif dir == 2 or dir == 3:
+                    if self.list[bNeighbourId].nodes[0] != self.nodes[0] or \
+                       self.list[bNeighbourId].nodes[2] != self.nodes[2]:
+                        raise ValueError("Nodes on edge mismatch")
+                elif dir == 4 or dir == 5:
+                    if self.list[bNeighbourId].nodes[0] != self.nodes[0] or \
+                       self.list[bNeighbourId].nodes[1] != self.nodes[1]:
+                        raise ValueError("Nodes on edge mismatch")
+
 
     def ownToNeighbourId(self,id):
         """

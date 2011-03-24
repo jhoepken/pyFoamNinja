@@ -25,6 +25,7 @@ top = BlockMesh.patch("top",[
                             block3.faces[5]
                             ],type="wall")
 
+
 mesh = BlockMesh.blockMesh(case)
 mesh.addBlocks([block1,block2,block3])
 mesh.addPatches([inlet,top])
