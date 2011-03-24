@@ -21,15 +21,23 @@ class blockMesh:
 
         self.patches = []
 
+
     def patchEntries(self):
+        """
+        Returns the entries for the patches in the ``blockMeshDict``.
+
+        :rtype: list
+        """
         output = []
         for pI in self.patches:
             output.append("%s %s" %(pI.type,pI.name))
             output.append(pI.getFaces())
-
         return output
 
     def addPatches(self,patches):
+        """
+        Adds a patch to the mesh
+        """
         self.patches += patches
 
     def addBlocks(self,blocks):
@@ -208,6 +216,25 @@ class block:
         self.nodes = nodes
 
         self.faces = []
+        """
+        Stores the faces of the block.
+
+        :type: list
+        """
+
+        self.neighbours = {
+                            0: False,
+                            1: False,
+                            2: False,
+                            3: False,
+                            4: False,
+                            5: False
+                            }
+        """
+        Stores the ids of the neighbouring blocks.
+
+        :type: dict
+        """
 
 
         # Create from 8 points
@@ -227,6 +254,54 @@ class block:
             raise ValueError("Incorrect numbers of points passed to create a block")
             
         self.generateFaces()
+        self.findNeighbour()
+        
+
+    def __eq__(self,other):
+        if self.id == other.id:
+            return True
+        else:
+            return False
+
+    def ownToNeighbourId(self,id):
+        """
+        Translates the face id (0-5) from the current block, to the notation of
+        the adjoining block and returns that id.
+
+        :param id: Number of the block's face
+        :type id: int
+
+        :rtype: int
+        """
+        out = -1
+        if id%2:
+            return id - 1
+        else:
+            return id + 1
+
+
+    def findNeighbour(self):
+        """
+        Finds the neighbouring blocks for the current block and stores their ids
+        in :meth:`neighbours`. The search is pretty stupid and there is severe
+        room for improvements.
+        """
+
+        # Check all existing blocks, but not self
+        for bI in self.list:
+            if bI != self:
+
+                # Loop over all faces of the respective block and check if the
+                # current block shares the same face. If so, exchange the
+                # neighboring ids.
+                for fI in bI.faces:
+                    ownFace = 0
+                    for fIOwn in self.faces:
+                        if fI == fIOwn:
+                            self.neighbours[ownFace] = bI.id
+                            bI.neighbours[self.ownToNeighbourId(ownFace)] = self.id
+
+                        ownFace += 1
 
 
     def checkDuplicateVertices(self,v):
@@ -345,7 +420,7 @@ class face:
         return self.outputString()
 
     def __eq__(self,other):
-        if [True for vI in self.verticeIds if vI in other].count(True) == 4:
+        if [True for vI in self.vertices if vI.id in other.verticeIds].count(True) == 4:
             return True
         else:
             return False
