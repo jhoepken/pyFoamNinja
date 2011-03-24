@@ -199,6 +199,12 @@ class block:
     :type: list
     """
 
+    edges = []
+    """
+    Stores all existing edges.
+
+    :type: list
+    """
 
     def __init__(
                 self,
@@ -218,7 +224,13 @@ class block:
 
         :type: int
         """
+
         self.ownVertices = []
+        """
+        Stores the vertices, that are used by the block
+
+        :type: list
+        """
 
         self.nodes = nodes
 
@@ -228,6 +240,8 @@ class block:
 
         :type: list
         """
+
+        self.ownEdges = []
 
         self.neighbours = {
                             0: False,
@@ -261,6 +275,7 @@ class block:
             raise ValueError("Incorrect numbers of points passed to create a block")
             
         self.generateFaces()
+        self.generateEdges()
         self.findNeighbour()
 
     def __eq__(self,other):
@@ -405,6 +420,79 @@ class block:
                                 self.ownVertices[7]
                                 ]))
 
+    def generateEdges(self):
+        # Edge 0
+        self.edges.append(edge(
+                                self.ownVertices[0],
+                                self.ownVertices[1]
+                            ))
+                                
+        # Edge 1
+        self.edges.append(edge(
+                                self.ownVertices[3],
+                                self.ownVertices[2]
+                            ))
+                                
+        # Edge 2
+        self.edges.append(edge(
+                                self.ownVertices[7],
+                                self.ownVertices[6]
+                            ))
+                                
+        # Edge 3
+        self.edges.append(edge(
+                                self.ownVertices[4],
+                                self.ownVertices[5]
+                            ))
+                                
+        # Edge 4
+        self.edges.append(edge(
+                                self.ownVertices[0],
+                                self.ownVertices[3]
+                            ))
+                                
+        # Edge 5
+        self.edges.append(edge(
+                                self.ownVertices[1],
+                                self.ownVertices[2]
+                            ))
+                                
+        # Edge 6
+        self.edges.append(edge(
+                                self.ownVertices[5],
+                                self.ownVertices[6]
+                            ))
+                                
+        # Edge 7
+        self.edges.append(edge(
+                                self.ownVertices[4],
+                                self.ownVertices[7]
+                            ))
+                                
+        # Edge 8
+        self.edges.append(edge(
+                                self.ownVertices[0],
+                                self.ownVertices[4]
+                            ))
+                                
+        # Edge 9
+        self.edges.append(edge(
+                                self.ownVertices[1],
+                                self.ownVertices[5]
+                            ))
+                                
+        # Edge 10
+        self.edges.append(edge(
+                                self.ownVertices[2],
+                                self.ownVertices[6]
+                            ))
+
+        # Edge 11
+        self.edges.append(edge(
+                                self.ownVertices[3],
+                                self.ownVertices[7]
+                            ))
+
     def getBlock(self):
         
         v = " ".join([str(vI.id) for vI in self.vertices])
@@ -414,6 +502,25 @@ class block:
                                                                 self.nodes[1],
                                                                 self.nodes[2],
                                                                 1,1,1)
+
+
+class edge:
+
+    edgeCount = 0
+
+    def __init__(
+                self,
+                start,
+                end,
+                type='line',
+                *args
+                ):
+        self.id = self.__class__.edgeCount
+        self.__class__.edgeCount += 1
+
+        self.start = start
+        self.end = end
+        self.type = type
 
 
 
