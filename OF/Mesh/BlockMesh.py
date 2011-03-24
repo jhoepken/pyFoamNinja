@@ -1,4 +1,5 @@
 from os.path import join
+from copy import deepcopy
 import math
 
 from PyFoam.Basics.DataStructures import Vector
@@ -9,15 +10,16 @@ class blockMesh:
 
     def __init__(
                 self,
-                case,
-                blocks,
-                patches
+                case
                 ):
 
         self.case = case
-        self.blocks = blocks
-        self.patches = patches
 
+        self.blocks = []
+
+        self.vertices = []
+
+        self.patches = []
 
     def patchEntries(self):
         output = []
@@ -27,26 +29,27 @@ class blockMesh:
 
         return output
 
+    def addPatches(self,patches):
+        self.patches += patches
+
+    def addBlocks(self,blocks):
+        """
+        Adds blocks to the mesh. 
+        """
+        self.blocks += blocks
+        self.vertices = blocks[0].vertices
 
     def getVertices(self):
+        """
+        Returns all vertices, but filters the ones which are only a reference.
+
+        :rtype: list
+        """
         output = []
 
-        for vI in self.blocks[0].vertices[0].allVertices():
-            output.append(vI)
-
-
-        #for blockI in self.blocks:
-            #for vI in blockI.vertices:
-                #if not vI.duplicate and not vI in output:
-                    #output.append(vI)
-                    #vI.order = i
-                    #
-                    #for vJ in vI.allVertices():
-                        #if vJ == vI:
-                            #print vI
-                            #vJ.order = i
-
-                    #i += 1
+        for vI in self.vertices:
+            if not vI.duplicate:
+                output.append(vI)
 
         return output
 
@@ -54,7 +57,13 @@ class blockMesh:
         
         output = []
         for blockI in self.blocks:
-            v = " ".join([str(vI.order) for vI in blockI.vertices])
+            blockVertices = []
+            for vI in blockI.ownVertices:
+                try:
+                    blockVertices.append(str(vI.id))
+                except AttributeError:
+                    blockVertices.append(str(vI))
+            v = " ".join(blockVertices)
             print v
             output.append("hex (%s) (%i %i %i) simpleGrading (%f %f %f)" %(v,
                                                                 blockI.nodes[0],
@@ -100,15 +109,20 @@ edges
                                         )
         # Adopted from
         # http://stackoverflow.com/questions/952914/making-a-flat-list-out-of-list-of-lists-in-python
-        template['vertices'] = self.getVertices() #[bI for blockI in self.blocks for bI in blockI.vertices]
+        #template['vertices'] = self.getVertices() #[bI for blockI in self.blocks for bI in blockI.vertices]
+        template['vertices'] = self.getVertices()
 
         template['blocks'] = self.getBlocks()
 
-        #template['patches'] = self.patchEntries()
+        template['patches'] = self.patchEntries()
 
         template.writeFile()
 
 class patch:
+    """
+    Representation of a blockMesh patch. Each patch consists one or multiple
+    faces.
+    """
     
     def __init__(
                 self,
@@ -116,6 +130,14 @@ class patch:
                 faces,
                 type = "patch"
                 ):
+        """
+        :param name: Name of the patch
+        :type name: string
+        :param faces: Faces the patch consists of
+        :type faces: list
+        :param type: Type of the patch (Default = ``patch``)
+        :type type: string
+        """
 
         self.name = name
         self.type = type
@@ -148,14 +170,31 @@ class block:
     :type: int
     """
 
+    vertices = []
+    """
+    Stores all existing vertices.
+
+    :type: list
+    """
+
+    list = []
+    """
+    Stores all existing blocks.
+
+    :type: list
+    """
+
+
     def __init__(
                 self,
-                vertices,
+                points,
                 nodes=False
                 ):
 
         # Increase the global blockCount for the next block
         self.__class__.blockCount += 1
+
+        self.__class__.list.append(self)
 
         self.id = self.__class__.blockCount 
         """
@@ -164,80 +203,108 @@ class block:
 
         :type: int
         """
+        self.ownVertices = []
 
         self.nodes = nodes
 
         self.faces = []
 
 
-        # Create from 8 vertices
-        if isinstance(vertices,list) and len(vertices) == 8:
-            print "Constructing block from 8 vertices"
-            self.vertices = vertices
+        # Create from 8 points
+        if isinstance(points,list) and len(points) == 8:
+            print "Constructing block from 8 points"
+            for pI in points:
+                self.checkDuplicateVertices(pI)
+
 
         # Create from bounding box
-        elif isinstance(vertices,list) and len(vertices) == 2:
-            print "Constructing block from 2 vertices"
-            self.vertices = boundingBox(vertices[0],vertices[1])
+        elif isinstance(points,list) and len(points) == 2:
+            print "Constructing block from 2 points"
+            for pI in boundingBox(points[0],points[1]):
+                self.checkDuplicateVertices(pI)
 
         else:
-            raise ValueError("Incorrect numbers of vertices passed to create a block")
+            raise ValueError("Incorrect numbers of points passed to create a block")
             
-            
-        from pprint import pprint
-        print "Vertices in Block:"
-        pprint(self.vertices)
-
         self.generateFaces()
+
+
+    def checkDuplicateVertices(self,v):
+        """
+        Checks if certain coordinates v already exist as a vertex. If so,
+        particular vertex is duplicated and the the duplicate property is set to
+        ``True``. This duplicate is appended to the global and local vertex 
+        list for later reference. Otherwise a new vertex is generated and 
+        appended to both lists as well. If the coordinates do exist, the function
+        returns ``True`` otherwise ``False``.
+
+        :param v: Coordinates to be checked and added
+        :type v: tuple
+
+        :rtype: bool
+        """
+        for vI in self.vertices:
+            if vI == v:
+                vTemp = deepcopy(vI)
+                vTemp.duplicate = True
+
+                self.vertices.append(vTemp)
+                self.ownVertices.append(vTemp)
+                return True
+
+        vTemp = vertex(v)
+        self.vertices.append(vTemp)
+        self.ownVertices.append(vTemp)
+        return False
 
 
     def generateFaces(self):
         # xmin face
         self.faces.append(face([
-                                self.vertices[4],
-                                self.vertices[7],
-                                self.vertices[3],
-                                self.vertices[0]
+                                self.ownVertices[4],
+                                self.ownVertices[7],
+                                self.ownVertices[3],
+                                self.ownVertices[0]
                                 ]))
 
         # xmax face
         self.faces.append(face([
-                                self.vertices[6],
-                                self.vertices[5],
-                                self.vertices[1],
-                                self.vertices[2]
+                                self.ownVertices[6],
+                                self.ownVertices[5],
+                                self.ownVertices[1],
+                                self.ownVertices[2]
                                 ]))
 
         # ymin face
         self.faces.append(face([
-                                self.vertices[5],
-                                self.vertices[4],
-                                self.vertices[0],
-                                self.vertices[1]
+                                self.ownVertices[5],
+                                self.ownVertices[4],
+                                self.ownVertices[0],
+                                self.ownVertices[1]
                                 ]))
 
         # ymax face
         self.faces.append(face([
-                                self.vertices[7],
-                                self.vertices[6],
-                                self.vertices[2],
-                                self.vertices[3]
+                                self.ownVertices[7],
+                                self.ownVertices[6],
+                                self.ownVertices[2],
+                                self.ownVertices[3]
                                 ]))
 
         # zmin face
         self.faces.append(face([
-                                self.vertices[3],
-                                self.vertices[2],
-                                self.vertices[1],
-                                self.vertices[0]
+                                self.ownVertices[3],
+                                self.ownVertices[2],
+                                self.ownVertices[1],
+                                self.ownVertices[0]
                                 ]))
 
         # zmax face
         self.faces.append(face([
-                                self.vertices[4],
-                                self.vertices[5],
-                                self.vertices[6],
-                                self.vertices[7]
+                                self.ownVertices[4],
+                                self.ownVertices[5],
+                                self.ownVertices[6],
+                                self.ownVertices[7]
                                 ]))
 
     def getBlock(self):
@@ -250,9 +317,18 @@ class block:
                                                                 self.nodes[2],
                                                                 1,1,1)
 
+
+
 class face:
+    """
+    Represents a face of a block, not a patch.
+    """
 
     def __init__(self,vertices):
+        """
+        :param vertices: Vertices the face consists of
+        :type vertices: list
+        """
         self.vertices = vertices
 
         self.boundaryFace = True
@@ -268,30 +344,36 @@ class face:
     def __repr__(self):
         return self.outputString()
 
+    def __eq__(self,other):
+        if [True for vI in self.verticeIds if vI in other].count(True) == 4:
+            return True
+        else:
+            return False
 
 
 def boundingBox(minV,maxV):
     """
     Creates all vertices for a bounding box and returns them as a list
 
-    :param min: Minimum boundary
-    :type min: :class:`~Mesher.BlockMesh.vertex`
-    :param max: Maximum boundary
-    :type max: :class:`~Mesher.BlockMesh.vertex`
+    :param min: Minimum boundary point
+    :type min: tuple
+    :param max: Maximum boundary point
+    :type max: tuple
 
     :rtype: list
     """
     return [
-            minV,
-            vertex(maxV[0],minV[1],minV[2]),
-            vertex(maxV[0],maxV[1],minV[2]),
-            vertex(minV[0],maxV[1],minV[2]),
+            ((minV[0],minV[1],minV[2])),
+            ((maxV[0],minV[1],minV[2])),
+            ((maxV[0],maxV[1],minV[2])),
+            ((minV[0],maxV[1],minV[2])),
 
-            vertex(minV[0],minV[1],maxV[2]),
-            vertex(maxV[0],minV[1],maxV[2]),
-            maxV,
-            vertex(minV[0],maxV[1],maxV[2])
+            ((minV[0],minV[1],maxV[2])),
+            ((maxV[0],minV[1],maxV[2])),
+            ((maxV[0],maxV[1],maxV[2])),
+            ((minV[0],maxV[1],maxV[2]))
             ]
+
 
 class vertex(Vector):
     """
@@ -316,14 +398,7 @@ class vertex(Vector):
     :type: int
     """
 
-    list = []
-    """
-    Global list, where all existing vertices are stored in.
-
-    :type: list
-    """
-
-    def __init__(self, x, y, z): 
+    def __init__(self, p):
         """
         :param x: x coordinate
         :type x: float
@@ -333,24 +408,9 @@ class vertex(Vector):
         :type z: float
         """
         # Ensure floats for the coordinates
-        x = float(x)
-        y = float(y)
-        z = float(z)
-
-        self.order = -1
-        """
-        Stores the order of this vertex in the output for blockMesh.
-
-        :type: int
-        """
-        
-        self.duplicate = False
-        """
-        Indicates whether a vertex at these coordinates does already exist or
-        not.
-
-        :type: bool
-        """
+        x = float(p[0])
+        y = float(p[1])
+        z = float(p[2])
 
         # Construct parent vector class
         Vector.__init__(self,x,y,z)
@@ -360,53 +420,22 @@ class vertex(Vector):
         self.y = y
         self.z = z
 
-        # If no vertex at the specified coordinates exist, it gets constructed,
-        # the global counter is increased accordingly and the id is assigned.
-        # The vertex is appended to the global vertex list
-        if not self.exists(x,y,z):
-            self.id = self.__class__.vertexCount + 1
-            self.__class__.vertexCount += 1
-            self.duplicate = False
+        self.duplicate = False
 
-        # If the vertex does exist, clone it and set the duplicate to True
-        else:
-            self = self.exists(x,y,z)
-            self.duplicate = True
-            print "Vertex does already exist. ", self.order
+        self.id = self.__class__.vertexCount + 1
+        self.__class__.vertexCount += 1
 
-        self.__class__.list.append(self)
-        self.ensureOrder()
             
 
-    def ensureOrder(self):
-        i = 0
-
-        for vI in self.list:
-            exists = False
-            for vJ in self.list:
-                if vI == vJ and vI.id != vJ.id and vI.duplicate:
-                    vI.order = vJ.order
-                    exists = True
-                else:
-                    vI.order = i
-            if not exists:
-                i += 1
-
-
     def __repr__(self):
-        return "%i,%i\t(%f %f %f)" %(self.id,self.order,self.x,self.y,self.z)
+        return "%i\t(%f %f %f)" %(self.id,self.x,self.y,self.z)
 
     def __eq__(self,other):
-        if self.x == other.x and self.y == other.y and self.z == other.z:
-            return True
+        if isinstance(other,tuple):
+            if self.x == other[0] and self.y == other[1] and self.z == other[2]:
+                return True
         else:
-            return False
-
-    def allVertices(self):
-        return self.__class__.list
-
-    def exists(self,x,y,z):
-        for lI in self.__class__.list:
-            if (lI.x == x) and (lI.y == y) and (lI.z == z):
-                return lI
+            if self.x == other.x and self.y == other.y and self.z == other.z:
+                return True
         return False
+
