@@ -1,6 +1,9 @@
 build/
 *.pyc
 
+# Ignore VIM filex
 *.swp
+*.swn
+*.swo
 
 PlyParser_FoamFileParser_parsetab*
