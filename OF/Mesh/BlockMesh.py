@@ -49,7 +49,6 @@ class blockMesh:
 
     def check(self):
         for bI in self.blocks:
-            print bI.neighbours
             bI.checkNodes()
 
     def getVertices(self):
@@ -82,7 +81,10 @@ class blockMesh:
                                                                 blockI.nodes[0],
                                                                 blockI.nodes[1],
                                                                 blockI.nodes[2],
-                                                                1,1,1))
+                                                                blockI.gradings[0],
+                                                                blockI.gradings[1],
+                                                                blockI.gradings[2]
+                                                                ))
         return output
 
 
@@ -209,14 +211,20 @@ class block:
     def __init__(
                 self,
                 points,
-                nodes=[False,False,False],
+                nodes={0:False,1:False,2:False},
+                gradings={0:False,1:False,2:False},
                 **kwargs
                 ):
 
         try:
-            self.noNodeAdjustment=kwargs['noNodeAdjustment']
+            self.noNodeAdjustment = kwargs['noNodeAdjustment']
         except KeyError:
             self.noNodeAdjustment = False
+
+        try:
+            self.noGradingAdjustment = kwargs['noGradingAdjustment']
+        except KeyError:
+            self.noGradingAdjustment = False
 
         # Increase the global blockCount for the next block
         self.__class__.blockCount += 1
@@ -238,7 +246,21 @@ class block:
         :type: list
         """
 
-        self.nodes = nodes
+        self.nodes = {0:False, 1: False, 2: False}
+        for i in range(0,3):
+            try:
+                self.nodes[i] = nodes[i]
+            except KeyError:
+                pass
+
+        self.gradings = {0:False, 1: False, 2: False}
+        for i in range(0,3):
+            try:
+                self.gradings[i] = gradings[i]
+            except KeyError:
+                pass
+
+        print "-> ", self.gradings
 
         self.faces = []
         """
@@ -303,6 +325,8 @@ class block:
 
                 # Check node distribution in 0 direction
                 if dir == 0 or dir == 1:
+
+                    # Check the number of nodes at first
                     if self.list[bNeighbourId].nodes[1] != self.nodes[1] or \
                        self.list[bNeighbourId].nodes[2] != self.nodes[2]:
                         if self.noNodeAdjustment:
@@ -314,6 +338,18 @@ class block:
                             else:
                                 self.nodes[1] = self.list[bNeighbourId].nodes[1]
                                 self.nodes[2] = self.list[bNeighbourId].nodes[2]
+
+                    if self.list[bNeighbourId].gradings[1] != self.gradings[1] or \
+                       self.list[bNeighbourId].gradings[2] != self.gradings[2]:
+                        if self.noGradingAdjustment:
+                            raise ValueError("Grading mismatch")
+                        else:
+                            if self.gradings[1]:
+                                self.list[bNeighbourId].gradings[1] = self.gradings[1]
+                                self.list[bNeighbourId].gradings[2] = self.gradings[2]
+                            else:
+                                self.gradings[1] = self.list[bNeighbourId].gradings[1]
+                                self.gradings[2] = self.list[bNeighbourId].gradings[2]
 
                 # Check node distribution in 1 direction
                 elif dir == 2 or dir == 3:
@@ -329,6 +365,18 @@ class block:
                                 self.nodes[0] = self.list[bNeighbourId].nodes[0]
                                 self.nodes[2] = self.list[bNeighbourId].nodes[2]
 
+                    if self.list[bNeighbourId].gradings[0] != self.gradings[0] or \
+                       self.list[bNeighbourId].gradings[2] != self.gradings[2]:
+                        if self.noGradingAdjustment:
+                            raise ValueError("Grading mismatch")
+                        else:
+                            if self.gradings[0]:
+                                self.list[bNeighbourId].gradings[0] = self.gradings[0]
+                                self.list[bNeighbourId].gradings[2] = self.gradings[2]
+                            else:
+                                self.gradings[0] = self.list[bNeighbourId].gradings[0]
+                                self.gradings[2] = self.list[bNeighbourId].gradings[2]
+
                 # Check node distribution in 2 direction
                 elif dir == 4 or dir == 5:
                     if self.list[bNeighbourId].nodes[0] != self.nodes[0] or \
@@ -342,6 +390,18 @@ class block:
                             else:
                                 self.nodes[0] = self.list[bNeighbourId].nodes[0]
                                 self.nodes[1] = self.list[bNeighbourId].nodes[1]
+
+                    if self.list[bNeighbourId].gradings[0] != self.gradings[0] or \
+                       self.list[bNeighbourId].gradings[1] != self.gradings[1]:
+                        if self.noGradingAdjustment:
+                            raise ValueError("Grading mismatch")
+                        else:
+                            if self.gradings[0]:
+                                self.list[bNeighbourId].gradings[0] = self.gradings[0]
+                                self.list[bNeighbourId].gradings[1] = self.gradings[1]
+                            else:
+                                self.gradings[0] = self.list[bNeighbourId].gradings[0]
+                                self.gradings[1] = self.list[bNeighbourId].gradings[1]
 
 
     def ownToNeighbourId(self,id):
@@ -561,15 +621,6 @@ class block:
                                 self.ownVertices[7]
                             )
 
-    def getBlock(self):
-        
-        v = " ".join([str(vI.id) for vI in self.vertices])
-        print v
-        return "hex (%s) (%i %i %i) simpleGrading (%f %f %f)" %(v,
-                                                                self.nodes[0],
-                                                                self.nodes[1],
-                                                                self.nodes[2],
-                                                                1,1,1)
 
 
 class edge:
