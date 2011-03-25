@@ -209,8 +209,14 @@ class block:
     def __init__(
                 self,
                 points,
-                nodes=False
+                nodes=[False,False,False],
+                **kwargs
                 ):
+
+        try:
+            self.noNodeAdjustment=kwargs['noNodeAdjustment']
+        except KeyError:
+            self.noNodeAdjustment = False
 
         # Increase the global blockCount for the next block
         self.__class__.blockCount += 1
@@ -285,20 +291,57 @@ class block:
             return False
 
     def checkNodes(self):
+        """
+        Checks the number of nodes on for all edges of the blocks and compares
+        it with the neighbouring blocks/edges. If the nodes are not identical, a
+        ValueError is raised. The mismatch is fixed automatically, but can be
+        overridden via a optional argument to the constructor of the block.
+        """
+        # Loop over all neighbouring blocks, if they exist
         for dir,bNeighbourId in self.neighbours.iteritems():
             if not isinstance(bNeighbourId,bool):
+
+                # Check node distribution in 0 direction
                 if dir == 0 or dir == 1:
                     if self.list[bNeighbourId].nodes[1] != self.nodes[1] or \
                        self.list[bNeighbourId].nodes[2] != self.nodes[2]:
-                        raise ValueError("Nodes on edge mismatch")
+                        if self.noNodeAdjustment:
+                            raise ValueError("Nodes on edge mismatch")
+                        else:
+                            if self.nodes[1]:
+                                self.list[bNeighbourId].nodes[1] = self.nodes[1]
+                                self.list[bNeighbourId].nodes[2] = self.nodes[2]
+                            else:
+                                self.nodes[1] = self.list[bNeighbourId].nodes[1]
+                                self.nodes[2] = self.list[bNeighbourId].nodes[2]
+
+                # Check node distribution in 1 direction
                 elif dir == 2 or dir == 3:
                     if self.list[bNeighbourId].nodes[0] != self.nodes[0] or \
                        self.list[bNeighbourId].nodes[2] != self.nodes[2]:
-                        raise ValueError("Nodes on edge mismatch")
+                        if self.noNodeAdjustment:
+                            raise ValueError("Nodes on edge mismatch")
+                        else:
+                            if self.nodes[0]:
+                                self.list[bNeighbourId].nodes[0] = self.nodes[0]
+                                self.list[bNeighbourId].nodes[2] = self.nodes[2]
+                            else:
+                                self.nodes[0] = self.list[bNeighbourId].nodes[0]
+                                self.nodes[2] = self.list[bNeighbourId].nodes[2]
+
+                # Check node distribution in 2 direction
                 elif dir == 4 or dir == 5:
                     if self.list[bNeighbourId].nodes[0] != self.nodes[0] or \
                        self.list[bNeighbourId].nodes[1] != self.nodes[1]:
-                        raise ValueError("Nodes on edge mismatch")
+                        if self.noNodeAdjustment:
+                            raise ValueError("Nodes on edge mismatch")
+                        else:
+                            if self.nodes[0]:
+                                self.list[bNeighbourId].nodes[0] = self.nodes[0]
+                                self.list[bNeighbourId].nodes[1] = self.nodes[1]
+                            else:
+                                self.nodes[0] = self.list[bNeighbourId].nodes[0]
+                                self.nodes[1] = self.list[bNeighbourId].nodes[1]
 
 
     def ownToNeighbourId(self,id):
@@ -370,6 +413,31 @@ class block:
         self.ownVertices.append(vTemp)
         return False
 
+    def checkDuplicateEdges(self,start,end):
+        """
+        Checks if a certain edge does already exist. If so, it is copied and
+        marked as a duplicate. Otherwise it is created. The edges are appended
+        to the current block as well as to the global list of edges.
+
+        :param start: start vertex
+        :type start: :class:`vertex`
+        :param end: end vertex
+        :type end: :class:`vertex`
+
+        :rtype: bool
+        """
+        for eI in self.edges:
+            if start == eI.start and end == eI.end:
+                eTemp = deepcopy(eI)
+                eTemp.duplicate = True
+
+                self.edges.append(eTemp)
+                self.ownEdges.append(eTemp)
+                return True
+        
+        eTemp = edge(start,end)
+        self.edges.append(eTemp)
+        self.ownEdges.append(eTemp)
 
     def generateFaces(self):
         # xmin face
@@ -422,76 +490,76 @@ class block:
 
     def generateEdges(self):
         # Edge 0
-        self.edges.append(edge(
+        self.checkDuplicateEdges(
                                 self.ownVertices[0],
                                 self.ownVertices[1]
-                            ))
+                            )
                                 
         # Edge 1
-        self.edges.append(edge(
+        self.checkDuplicateEdges(
                                 self.ownVertices[3],
                                 self.ownVertices[2]
-                            ))
+                            )
                                 
         # Edge 2
-        self.edges.append(edge(
+        self.checkDuplicateEdges(
                                 self.ownVertices[7],
                                 self.ownVertices[6]
-                            ))
+                            )
                                 
         # Edge 3
-        self.edges.append(edge(
+        self.checkDuplicateEdges(
                                 self.ownVertices[4],
                                 self.ownVertices[5]
-                            ))
+                            )
                                 
         # Edge 4
-        self.edges.append(edge(
+        self.checkDuplicateEdges(
                                 self.ownVertices[0],
                                 self.ownVertices[3]
-                            ))
+                            )
                                 
         # Edge 5
-        self.edges.append(edge(
+        self.checkDuplicateEdges(
                                 self.ownVertices[1],
                                 self.ownVertices[2]
-                            ))
+                            )
                                 
         # Edge 6
-        self.edges.append(edge(
+        self.checkDuplicateEdges(
                                 self.ownVertices[5],
                                 self.ownVertices[6]
-                            ))
+                            )
                                 
         # Edge 7
-        self.edges.append(edge(
+        self.checkDuplicateEdges(
                                 self.ownVertices[4],
                                 self.ownVertices[7]
-                            ))
+                            )
                                 
         # Edge 8
-        self.edges.append(edge(
+        self.checkDuplicateEdges(
                                 self.ownVertices[0],
                                 self.ownVertices[4]
-                            ))
+                            )
                                 
         # Edge 9
-        self.edges.append(edge(
+        self.checkDuplicateEdges(
                                 self.ownVertices[1],
                                 self.ownVertices[5]
-                            ))
+                            )
                                 
         # Edge 10
-        self.edges.append(edge(
+        self.checkDuplicateEdges(
                                 self.ownVertices[2],
                                 self.ownVertices[6]
-                            ))
+                            )
 
         # Edge 11
-        self.edges.append(edge(
+        self.checkDuplicateEdges(
                                 self.ownVertices[3],
                                 self.ownVertices[7]
-                            ))
+                            )
 
     def getBlock(self):
         
@@ -519,9 +587,32 @@ class edge:
         self.__class__.edgeCount += 1
 
         self.start = start
-        self.end = end
-        self.type = type
+        """
+        Stores the start vertex
 
+        :type: :class:`vertex`
+        """
+
+        self.end = end
+        """
+        Stores the end vertex
+
+        :type: :class:`vertex`
+        """
+
+        self.type = type
+        """
+        Stores the type of the edge.
+
+        :type: string
+        """
+
+        self.nodes = False
+
+        self.duplicate = False
+
+    def __repr__(self):
+        return "Edge %i: (%i %i) %s" %(self.id,self.start.id,self.end.id,self.type)
 
 
 class face:
