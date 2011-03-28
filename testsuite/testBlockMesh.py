@@ -18,6 +18,9 @@ block3 = BlockMesh.block(points3,nodes={1:3},gradings={1:3})
 points4 = [(0,1,-3),(1,5,0)]
 block4 = BlockMesh.block(points4,nodes={2:15},gradings={2:0.5})
 
+points5 = [(2,0,0),(5,1,1)]
+block5 = BlockMesh.block(points5,nodes={0:4},gradings={0:1})
+
 inlet = BlockMesh.patch("inlet",[
                                 block1.faces[0],
                                 block3.faces[0]
@@ -30,7 +33,7 @@ top = BlockMesh.patch("top",[
 
 
 mesh = BlockMesh.blockMesh(case)
-mesh.addBlocks([block1,block2,block3,block4])
+mesh.addBlocks([block1,block2,block3,block4,block5])
 mesh.addPatches([inlet,top])
 mesh.write()
 

@@ -1,6 +1,7 @@
 from os.path import join
 from copy import deepcopy
 import math
+import sys
 
 from PyFoam.Basics.DataStructures import Vector
 from PyFoam.Basics.TemplateFile import TemplateFile
@@ -48,6 +49,8 @@ class blockMesh:
         self.vertices = blocks[0].vertices
 
     def check(self):
+        print self.blocks[0].allNeighbours(0)
+
         for bI in self.blocks:
             bI.checkNodes()
 
@@ -311,6 +314,70 @@ class block:
             return True
         else:
             return False
+
+    def __repr__(self):
+        return "Block ID: %i" %(self.id)
+
+    def allNeighbours(self,dir):
+        """
+        Finds and returns all neighbours of the block for a specific direction.
+        The directions are 0,1,2.
+
+        :param dir: Direction to search
+        :type dir: int
+
+        :rtype: list
+        """
+
+        dir = [dir*2,dir*2+1]
+
+        # Stores all neighbours for the particular direction
+        nbFound = []
+
+        # Search for neighbouring blocks in all directions and store them in one
+        # list. Unfortunately :meth:`getNeighbours` returns ``False`` in a list
+        # and these entries need to be removed.
+        for dirI in dir:
+            nbFound += self.getNeighbours(dirI,self.id)
+
+        nb = []
+        # Clean up the list, by removing all ``False`` entries
+        for nbI in nbFound:
+            if nbI:
+                nb.append(nbI)
+
+        print "self.getNeighbours ->"
+        print nb
+        print "<- self.getNeighbours"
+
+
+    def getNeighbours(self,dir,blockId):
+        """
+        Recursively searches all neighbours in one major direction (x,y,z),
+        starting at one block. A list is returned, that contains the block ids
+        for the neighbouring blocks.
+
+        :param dir: Direction to be searched
+        :type dir: int
+        :param blockId: ID of the block to investigate
+        :type blockId: int
+
+        :rtype: list
+        """
+
+        # Get the neighbours of the block for the respective direction
+        nNext = self.list[blockId].neighbours[dir]
+
+        # If there are neighbours for that direction, search them as well. This
+        # is where the recursion starts.
+        if nNext:
+            newID = self.getNeighbours(dir,nNext)
+            if newID:
+                newID.append(nNext)
+                return newID
+        else:
+            return [False]
+
 
     def checkNodes(self):
         """
