@@ -21,6 +21,9 @@ block4 = BlockMesh.block(points4,nodes={2:15},gradings={2:0.5})
 points5 = [(2,0,0),(5,1,1)]
 block5 = BlockMesh.block(points5,nodes={0:7},gradings={0:1})
 
+
+block5.adjustGrading(block2,0)
+
 inlet = BlockMesh.patch("inlet",[
                                 block1.faces[0],
                                 block3.faces[0]

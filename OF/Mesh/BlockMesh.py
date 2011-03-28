@@ -2,6 +2,7 @@ from os.path import join
 from copy import deepcopy
 import math
 import sys
+import numpy
 
 from PyFoam.Basics.DataStructures import Vector
 from PyFoam.Basics.TemplateFile import TemplateFile
@@ -314,6 +315,54 @@ class block:
 
     def __repr__(self):
         return "Block ID: %i" %(self.id)
+
+    def adjustGrading(self,referenceBlock,dir):
+        neighbour = False
+
+        for dirI,bI in self.neighbours.iteritems():
+            if self.list[bI] == referenceBlock:
+                neighbour = dirI
+
+        # Calculate the mean edge length from all four edges. For a purely
+        # orthogonal mesh, this is useless. But if the edges are not aligned in
+        # an orthogonal way, this becomes necessary.
+        edgeDir = range(dir*4,dir*4+4)
+        lAverageRef = 0.0
+        lAverageOwn = 0.0
+        for eId in edgeDir:
+            lAverageRef += referenceBlock.ownEdges[eId].l
+            lAverageOwn += self.ownEdges[eId].l
+        lAverageRef = lAverageRef/4
+        lAverageOwn = lAverageOwn/4
+
+        # Compute the average cell size of the target block
+        dXRef = lAverageRef/referenceBlock.nodes[dir]
+        dXOwn = lAverageOwn/self.nodes[dir]
+
+        if bool(neighbour%2):
+            i = self.nodes[dir]
+            print "Adjusting last node on edge"
+        else:
+            i = 1.0
+            print "Adjusting first node on edge"
+
+
+        rRange = 1.0/numpy.arange(1,500,0.05)
+        rMin = 0.0
+        r = 0.0
+
+        for rI in rRange:
+            if rMin == min(rMin,self.ownEdges[edgeDir[0]].gradFunction(rI,self.nodes[dir],dXRef,lAverageOwn,i)):
+                r = rI
+            else:
+                break
+    
+        r = 1.0/r
+        # ALL NEIGHBOURING CELLS HAVE TO BE ADJUSTED ACCORDING TO THE
+        # ADJUSTEMENTS DONE FOR THIS BLOCK. OTHERWISE THE ADJUSTED GRADING WILL
+        # BE OVERWRITTEN BY THE OTHER BLOCKS. BAD!!!
+
+        self.gradings[dir] = r
 
     def allNeighbours(self,dir):
         """
@@ -681,12 +730,53 @@ class edge:
         :type: string
         """
 
-        self.nodes = False
-
         self.duplicate = False
+
+        self.l = self.getLength()
 
     def __repr__(self):
         return "Edge %i: (%i %i) %s" %(self.id,self.start.id,self.end.id,self.type)
+
+    def getLength(self):
+        """
+        Calculates and returns the length of the edge.
+
+        :rtype: float
+        """
+        if self.type == 'line':
+            return  math.sqrt(
+                            abs(self.start.x-self.end.x)**2 +
+                            abs(self.start.y-self.end.y)**2 +
+                            abs(self.start.z-self.end.z)**2
+                        )
+
+    def lmbd(self,r,n,i=1):
+        """
+        Lambda function, that describes the position of a node on an edge.
+
+        :param r: Grading as used in blockMesh
+        :type r: float
+        :param n: Number of nodes on edge
+        :type n: int
+        :param i: Which node on the edge
+        :type i: int
+
+        .. math::
+
+            \lambda(r,i) = \\frac{1-r^i}{1-r^n}
+        """
+        rG = r**(1.0/(1.0-n))
+        return (1.0-rG**i)/(1.0-rG**n)
+
+
+    def gradFunction(self,r,n,dX,l,i):
+        """
+        Equation that is used to solve for the number of nodes on an edge.
+
+        .. math::
+            \lambda - \\frac{/Delta x}{l} = 0
+        """
+        return self.lmbd(r,n,i=i)-dX/l
 
 
 class face:
