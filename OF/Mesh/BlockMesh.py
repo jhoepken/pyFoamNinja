@@ -49,7 +49,6 @@ class blockMesh:
         self.vertices = blocks[0].vertices
 
     def check(self):
-        print self.blocks[0].allNeighbours(0)
 
         for bI in self.blocks:
             bI.checkNodes()
@@ -79,7 +78,6 @@ class blockMesh:
                 except AttributeError:
                     blockVertices.append(str(vI))
             v = " ".join(blockVertices)
-            print v
             output.append("hex (%s) (%i %i %i) simpleGrading (%f %f %f)" %(v,
                                                                 blockI.nodes[0],
                                                                 blockI.nodes[1],
@@ -263,7 +261,6 @@ class block:
             except KeyError:
                 pass
 
-        print "-> ", self.gradings
 
         self.faces = []
         """
@@ -329,6 +326,7 @@ class block:
         :rtype: list
         """
 
+        # Initialise the access function for the directions
         dir = [dir*2,dir*2+1]
 
         # Stores all neighbours for the particular direction
@@ -346,9 +344,7 @@ class block:
             if nbI:
                 nb.append(nbI)
 
-        print "self.getNeighbours ->"
-        print nb
-        print "<- self.getNeighbours"
+        return nb
 
 
     def getNeighbours(self,dir,blockId):
@@ -386,89 +382,49 @@ class block:
         ValueError is raised. The mismatch is fixed automatically, but can be
         overridden via a optional argument to the constructor of the block.
         """
-        # Loop over all neighbouring blocks, if they exist
-        for dir,bNeighbourId in self.neighbours.iteritems():
-            if not isinstance(bNeighbourId,bool):
 
-                # Check node distribution in 0 direction
-                if dir == 0 or dir == 1:
+        # Initialise list with 0..2, representing all directions
+        dir = range(0,3)
 
-                    # Check the number of nodes at first
-                    if self.list[bNeighbourId].nodes[1] != self.nodes[1] or \
-                       self.list[bNeighbourId].nodes[2] != self.nodes[2]:
-                        if self.noNodeAdjustment:
-                            raise ValueError("Nodes on edge mismatch")
+        # Loop over all directions
+        for dirI in dir:
+
+            # As only the other two directions and not the current one have to
+            # be checked, create a second list with the direction keys as
+            # elements. This list is updated for each direction.
+            checkDir = []
+            for i in dir:
+                if i != dirI:
+                    checkDir.append(i)
+
+            # Check all direct and indirect neighbours for the current direction
+            # and investigate the node and grading distribution. Raise errors if
+            # necessary or adjust the nodes and gradings to give a proper mesh.
+            for nbI in self.allNeighbours(dirI):
+
+                if self.list[nbI].nodes[checkDir[0]] != self.nodes[checkDir[0]] or \
+                   self.list[nbI].nodes[checkDir[1]] != self.nodes[checkDir[1]]:
+                    if self.noNodeAdjustment:
+                        raise ValueError("Nodes on edge mismatch")
+                    else:
+                        if self.nodes[checkDir[0]]:
+                            self.list[nbI].nodes[checkDir[0]] = self.nodes[checkDir[0]]
+                            self.list[nbI].nodes[checkDir[1]] = self.nodes[checkDir[1]]
                         else:
-                            if self.nodes[1]:
-                                self.list[bNeighbourId].nodes[1] = self.nodes[1]
-                                self.list[bNeighbourId].nodes[2] = self.nodes[2]
-                            else:
-                                self.nodes[1] = self.list[bNeighbourId].nodes[1]
-                                self.nodes[2] = self.list[bNeighbourId].nodes[2]
+                            self.nodes[checkDir[0]] = self.list[nbI].nodes[checkDir[0]]
+                            self.nodes[checkDir[1]] = self.list[nbI].nodes[checkDir[1]]
 
-                    if self.list[bNeighbourId].gradings[1] != self.gradings[1] or \
-                       self.list[bNeighbourId].gradings[2] != self.gradings[2]:
-                        if self.noGradingAdjustment:
-                            raise ValueError("Grading mismatch")
+                if self.list[nbI].gradings[checkDir[0]] != self.gradings[checkDir[0]] or \
+                    self.list[nbI].gradings[checkDir[1]] != self.gradings[checkDir[1]]:
+                    if self.noGradingAdjustment:
+                        raise ValueError("Grading mismatch")
+                    else:
+                        if self.gradings[checkDir[0]]:
+                            self.list[nbI].gradings[checkDir[0]] = self.gradings[checkDir[0]]
+                            self.list[nbI].gradings[checkDir[1]] = self.gradings[checkDir[1]]
                         else:
-                            if self.gradings[1]:
-                                self.list[bNeighbourId].gradings[1] = self.gradings[1]
-                                self.list[bNeighbourId].gradings[2] = self.gradings[2]
-                            else:
-                                self.gradings[1] = self.list[bNeighbourId].gradings[1]
-                                self.gradings[2] = self.list[bNeighbourId].gradings[2]
-
-                # Check node distribution in 1 direction
-                elif dir == 2 or dir == 3:
-                    if self.list[bNeighbourId].nodes[0] != self.nodes[0] or \
-                       self.list[bNeighbourId].nodes[2] != self.nodes[2]:
-                        if self.noNodeAdjustment:
-                            raise ValueError("Nodes on edge mismatch")
-                        else:
-                            if self.nodes[0]:
-                                self.list[bNeighbourId].nodes[0] = self.nodes[0]
-                                self.list[bNeighbourId].nodes[2] = self.nodes[2]
-                            else:
-                                self.nodes[0] = self.list[bNeighbourId].nodes[0]
-                                self.nodes[2] = self.list[bNeighbourId].nodes[2]
-
-                    if self.list[bNeighbourId].gradings[0] != self.gradings[0] or \
-                       self.list[bNeighbourId].gradings[2] != self.gradings[2]:
-                        if self.noGradingAdjustment:
-                            raise ValueError("Grading mismatch")
-                        else:
-                            if self.gradings[0]:
-                                self.list[bNeighbourId].gradings[0] = self.gradings[0]
-                                self.list[bNeighbourId].gradings[2] = self.gradings[2]
-                            else:
-                                self.gradings[0] = self.list[bNeighbourId].gradings[0]
-                                self.gradings[2] = self.list[bNeighbourId].gradings[2]
-
-                # Check node distribution in 2 direction
-                elif dir == 4 or dir == 5:
-                    if self.list[bNeighbourId].nodes[0] != self.nodes[0] or \
-                       self.list[bNeighbourId].nodes[1] != self.nodes[1]:
-                        if self.noNodeAdjustment:
-                            raise ValueError("Nodes on edge mismatch")
-                        else:
-                            if self.nodes[0]:
-                                self.list[bNeighbourId].nodes[0] = self.nodes[0]
-                                self.list[bNeighbourId].nodes[1] = self.nodes[1]
-                            else:
-                                self.nodes[0] = self.list[bNeighbourId].nodes[0]
-                                self.nodes[1] = self.list[bNeighbourId].nodes[1]
-
-                    if self.list[bNeighbourId].gradings[0] != self.gradings[0] or \
-                       self.list[bNeighbourId].gradings[1] != self.gradings[1]:
-                        if self.noGradingAdjustment:
-                            raise ValueError("Grading mismatch")
-                        else:
-                            if self.gradings[0]:
-                                self.list[bNeighbourId].gradings[0] = self.gradings[0]
-                                self.list[bNeighbourId].gradings[1] = self.gradings[1]
-                            else:
-                                self.gradings[0] = self.list[bNeighbourId].gradings[0]
-                                self.gradings[1] = self.list[bNeighbourId].gradings[1]
+                            self.gradings[checkDir[0]] = self.list[nbI].gradings[checkDir[0]]
+                            self.gradings[checkDir[1]] = self.list[nbI].gradings[checkDir[1]]
 
 
     def ownToNeighbourId(self,id):
