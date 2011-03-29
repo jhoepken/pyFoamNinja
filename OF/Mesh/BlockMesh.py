@@ -307,6 +307,7 @@ class block:
         self.generateEdges()
         self.findNeighbour()
 
+
     def __eq__(self,other):
         if self.id == other.id:
             return True
@@ -317,11 +318,14 @@ class block:
         return "Block ID: %i" %(self.id)
 
     def adjustGrading(self,referenceBlock,dir):
-        neighbour = False
+        neighbour = -1
 
         for dirI,bI in self.neighbours.iteritems():
             if self.list[bI] == referenceBlock:
                 neighbour = dirI
+                
+        if neighbour == -1:
+            raise KeyError("The provided block is not a direct neighbour")
 
         # Calculate the mean edge length from all four edges. For a purely
         # orthogonal mesh, this is useless. But if the edges are not aligned in
@@ -339,30 +343,38 @@ class block:
         dXRef = lAverageRef/referenceBlock.nodes[dir]
         dXOwn = lAverageOwn/self.nodes[dir]
 
-        if bool(neighbour%2):
-            i = self.nodes[dir]
-            print "Adjusting last node on edge"
-        else:
-            i = 1.0
-            print "Adjusting first node on edge"
-
-
-        rRange = 1.0/numpy.arange(1,500,0.05)
+        # Initialise start values
+        rRange = 1.0/numpy.arange(0.001,500,0.05)
         rMin = 0.0
         r = 0.0
 
+        # Solve for r
         for rI in rRange:
-            if rMin == min(rMin,self.ownEdges[edgeDir[0]].gradFunction(rI,self.nodes[dir],dXRef,lAverageOwn,i)):
+            if rMin == min( \
+                            rMin,
+                            self.ownEdges[edgeDir[0]].gradFunction(
+                                    rI,
+                                    self.nodes[dir],
+                                    dXRef,
+                                    lAverageOwn,
+                                    1
+                                )
+                          ):
                 r = rI
             else:
                 break
     
-        r = 1.0/r
-        # ALL NEIGHBOURING CELLS HAVE TO BE ADJUSTED ACCORDING TO THE
-        # ADJUSTEMENTS DONE FOR THIS BLOCK. OTHERWISE THE ADJUSTED GRADING WILL
-        # BE OVERWRITTEN BY THE OTHER BLOCKS. BAD!!!
+        # If the last node of the edge needs to be adjusted, simply inverse the
+        # grading.
+        if not bool(neighbour%2):
+            r = 1.0/r
 
+        # Update the grading for this block
         self.gradings[dir] = r
+
+        # Update the all neighbours and their neighbours and keep the grading of
+        # this block constant.
+        self.checkNodes(keepCurrent=True)
 
     def allNeighbours(self,dir):
         """
@@ -424,7 +436,7 @@ class block:
             return [False]
 
 
-    def checkNodes(self):
+    def checkNodes(self,keepCurrent=False):
         """
         Checks the number of nodes on for all edges of the blocks and compares
         it with the neighbouring blocks/edges. If the nodes are not identical, a
@@ -459,7 +471,7 @@ class block:
                         if self.nodes[checkDir[0]]:
                             self.list[nbI].nodes[checkDir[0]] = self.nodes[checkDir[0]]
                             self.list[nbI].nodes[checkDir[1]] = self.nodes[checkDir[1]]
-                        else:
+                        elif not keepCurrent:
                             self.nodes[checkDir[0]] = self.list[nbI].nodes[checkDir[0]]
                             self.nodes[checkDir[1]] = self.list[nbI].nodes[checkDir[1]]
 
@@ -471,7 +483,7 @@ class block:
                         if self.gradings[checkDir[0]]:
                             self.list[nbI].gradings[checkDir[0]] = self.gradings[checkDir[0]]
                             self.list[nbI].gradings[checkDir[1]] = self.gradings[checkDir[1]]
-                        else:
+                        elif not keepCurrent:
                             self.gradings[checkDir[0]] = self.list[nbI].gradings[checkDir[0]]
                             self.gradings[checkDir[1]] = self.list[nbI].gradings[checkDir[1]]
 
