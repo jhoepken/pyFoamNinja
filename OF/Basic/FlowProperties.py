@@ -11,7 +11,7 @@ def Re(**kwargs):
 
     ..math::
         
-        Re = \\frac{v*L}{\\nu}
+        Re = \\frac{u*L}{\\nu}
 
 
     If the velocity is given, the Reynoldsnumber is returned and if a
@@ -19,8 +19,8 @@ def Re(**kwargs):
     for the corresponding velocity. If the function gets a Reynoldsnumber as a
     parameter, the velocity is returned.
     
-    :param v: Velocity
-    :type v: float
+    :param u: velocity
+    :type u: float
     :param Re: Reynoldsnumber
     :type Re: float
     :param Fr: Froudenumber
@@ -37,8 +37,8 @@ def Re(**kwargs):
     except KeyError:
         nu = Constants.water['nu']
 
-    if 'v' in kwargs.iterkeys():
-        return kwargs['v']*kwargs['L']/nu
+    if 'u' in kwargs.iterkeys():
+        return kwargs['u']*kwargs['L']/nu
 
     elif 'Fr' in kwargs.iterkeys():
         return Fr(**kwargs)
@@ -53,15 +53,15 @@ def Fr(**kwargs):
 
     ..math::
 
-        Re = \\frac{v}{\sqrt{gL}}
+        Re = \\frac{u}{\sqrt{gL}}
 
     If the velocity is given, the Froudenumber is returned and if a
     Reynoldsnumber is provided as an argument, the Froudenumber is calculated
     for the corresponding velocity. If the function gets a Froudenumber as a
     parameter, the velocity is returned.
     
-    :param v: Velocity
-    :type v: float
+    :param u: Velocity
+    :type u: float
     :param Re: Reynoldsnumber
     :type Re: float
     :param Fr: Froudenumber
@@ -73,52 +73,52 @@ def Fr(**kwargs):
 
     :Author: Jens Hoepken <jhoepken@gmail.com>
     """
-    if 'v' in kwargs.iterkeys():
-        return kwargs['v']/sqrt(Constants.g*kwargs['L'])
+    if 'u' in kwargs.iterkeys():
+        return kwargs['u']/sqrt(Constants.g*kwargs['L'])
 
     elif 'Re' in kwargs.iterkeys():
-        kwargs['v'] =  Re(**kwargs)
+        kwargs['u'] =  Re(**kwargs)
         return Fr(**kwargs)
 
     elif 'Fr' in kwargs.iterkeys():
         return kwargs['Fr']*sqrt(Constants.g*kwargs['L'])
 
-def vFrRe(**kwargs):
+def uFrRe(**kwargs):
     """
     Calculates the velocity, Reynoldsnumber and Froudenumber, based on one
     velocity description and a reference length. All three are returned.
 
     :rtype: float,float,float
     """
-    velocityParams = ['v','Re','Fr']
+    velocityParams = ['u','Re','Fr']
 
     pCount = 0
-    for vI in velocityParams:
-        if vI in kwargs.iterkeys():
+    for uI in velocityParams:
+        if uI in kwargs.iterkeys():
             pCount += 1
     
 
-    if not kwargs['v'] and not kwargs['Re'] and not kwargs['Fr']:
-        raise ValueError("Neither v nor Re and Fr have been provided")
+    if not kwargs['u'] and not kwargs['Re'] and not kwargs['Fr']:
+        raise ValueError("Neither u nor Re and Fr have been provided")
     elif pCount > 1 :
-        raise ValueError("Too many velocity definitions (Re, v, Fr)")
+        raise ValueError("Too many velocity definitions (Re, u, Fr)")
 
     if not 'L' in kwargs.iterkeys():
         raise ValueError("A reference length has to be specified")
 
-    if kwargs['v']:
-        v_ = kwargs['v']
+    if kwargs['u']:
+        u_ = kwargs['u']
         Fr_ = Fr(**kwargs)
         Re_ = Re(**kwargs)
 
     elif kwargs['Fr']:
-        v_ = Fr(**kwargs)
+        u_ = Fr(**kwargs)
         Fr_ = kwargs['Fr']
         Re_ = Re(**kwargs)
 
     elif kwargs['Re']:
-        v_ = Re(**kwargs)
+        u_ = Re(**kwargs)
         Fr_ = Fr(**kwargs)
         Re_ = kwargs['Re']
 
-    return v_,Fr_,Re_
+    return u_,Fr_,Re_

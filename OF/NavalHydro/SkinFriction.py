@@ -26,8 +26,8 @@ def ittc57(**kwargs):
     :type Re: float
     :param Fr: Froudenumber
     :type Fr: float
-    :param v: Velocity :math:`[\\frac{m}{s}]`
-    :type v: float
+    :param u: Velocity :math:`[\\frac{m}{s}]`
+    :type u: float
     :param L: Reference length :math:`[m]`
     :type L: float
 
@@ -38,7 +38,7 @@ def ittc57(**kwargs):
     if 'Re' in kwargs.iterkeys():
         Re = kwargs['Re']
     else:
-        v,Fr,Re = FlowProperties.vFrRe(**kwargs)
+        u,Fr,Re = FlowProperties.uFrRe(**kwargs)
 
     return 0.075/((log(Re)-2)**2)
 
@@ -62,8 +62,8 @@ def huges(**kwargs):
     :type Re: float
     :param Fr: Froudenumber
     :type Fr: float
-    :param v: Velocity :math:`[\\frac{m}{s}]`
-    :type v: float
+    :param u: Velocity :math:`[\\frac{m}{s}]`
+    :type u: float
     :param L: Reference length :math:`[m]`
     :type L: float
 
@@ -75,6 +75,6 @@ def huges(**kwargs):
     if 'Re' in kwargs.iterkeys():
         Re = kwargs['Re']
     else:
-        v,Fr,Re = FlowProperties.vFrRe(v=v,Fr=Fr,Re=Re,L=L,**kwargs)
+        u,Fr,Re = FlowProperties.uFrRe(**kwargs)
         
     return 0.066/((log(Re)-2.03)**2)
