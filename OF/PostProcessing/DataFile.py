@@ -33,13 +33,7 @@ class dataFile():
         self._path = path
 
         # Read the data file via readlines and store the content
-        # tmpFile = open(path,"r")
-        # No need for explicit garbage collection, automatic variable dies
-        # anyway and the handle is given to _fileData: this is faster, I 
-        # have tested it out. 
         self._fileData = open(path,"r").readlines()
-        #tmpFile.close()
-        # del tmpFile
         self.parse()
 
     def __getitem__(self,key):
