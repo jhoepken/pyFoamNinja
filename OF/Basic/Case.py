@@ -28,6 +28,13 @@ class case(SolutionDirectory):
     :type: string
     """
 
+    inletVelocity = 0.0
+    """
+    Stores the inlet velocity as a vector
+
+    :type: tuple
+    """
+
     def __init__(
                     self,
                     name,
@@ -61,3 +68,7 @@ class case(SolutionDirectory):
             self.inletPatch = kwargs['inletPatch']
         else:
             self.inletPatch = Settings.inletPatch
+
+        self.inletVelocity = self.getDictionaryContents(self.first,'U')\
+                            ['boundaryField'][self.inletPatch]['value'].val
+                        
