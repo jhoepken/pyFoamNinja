@@ -11,7 +11,8 @@ setup(name='OF',
                 'OF',
                 'OF.PostProcessing',
                 'OF.NavalHydro',
-                'OF.Basic'
+                'OF.Basic',
+                'OF.Mesh'
                 ],
       description='Python library to simplify the usage of OpenFOAM',
       url='http://www.navitential.com',
