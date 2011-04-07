@@ -872,12 +872,8 @@ class vertex(Vector):
 
     def __init__(self, p):
         """
-        :param x: x coordinate
-        :type x: float
-        :param y: y coordinate
-        :type y: float
-        :param z: z coordinate
-        :type z: float
+        :param p: Coordinates of the vertex
+        :type p: tuple
         """
         # Ensure floats for the coordinates
         x = float(p[0])
