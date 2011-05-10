@@ -1,14 +1,26 @@
 from os.path import join
 from copy import deepcopy
-import math
-import sys
-import numpy
+from math import sqrt
+from numpy import arange
 
 from PyFoam.Basics.DataStructures import Vector
 from PyFoam.Basics.TemplateFile import TemplateFile
 from PyFoam.RunDictionary.ParsedBlockMeshDict import ParsedBlockMeshDict
 
 class blockMesh:
+    """
+    Representation of a blockMesh. Vertices, blocks and patches need to be added
+    to the object, using the respective functions. After having added all
+    required parts of the mesh representation, the ``blockMeshDict`` is written
+    to the correct path.
+
+    :param case: Case to create the ``blockMeshDict`` in
+    :type case: SolutionDirectory
+
+    :Author: Jens Hoepken <jhoepken@gmail.com>,<jens.hoepken@uni-due.de>
+    :Version: 1.0
+    :Date: 03.03.2011
+    """
 
     def __init__(
                 self,
@@ -31,6 +43,10 @@ class blockMesh:
         :rtype: list
         """
         output = []
+
+        # Loop over all registered patches and construct the patch entries for
+        # the blockMeshDict from the patch type and name, followed by all faces
+        # assigned to that patch
         for pI in self.patches:
             output.append("%s %s" %(pI.type,pI.name))
             output.append(pI.getFaces())
@@ -38,19 +54,31 @@ class blockMesh:
 
     def addPatches(self,patches):
         """
-        Adds a patch to the mesh
+        Adds a list of patches to the mesh.
+
+        :param patches: Patches to add
+        :type patches: list
         """
         self.patches += patches
 
     def addBlocks(self,blocks):
         """
-        Adds blocks to the mesh. 
+        Adds a list of blocks to the mesh. 
+
+        :param blocks: Blocks to add
+        :type blocks: list
         """
         self.blocks += blocks
+
+        # As all vertices are stored in a global list in the block class, only
+        # the first item of the blocks needs to be accessed to gather all
+        # vertices
         self.vertices = blocks[0].vertices
 
     def check(self):
-
+        """
+        Checks all blocks
+        """
         for bI in self.blocks:
             bI.checkNodes()
 
@@ -69,6 +97,12 @@ class blockMesh:
         return output
 
     def getBlocks(self):
+        """
+        Returns a list of all blocks, with each list element formatted as a
+        valid ``blockMeshDict`` entry.
+
+        :rtype: list
+        """
         
         output = []
         for blockI in self.blocks:
@@ -91,6 +125,9 @@ class blockMesh:
 
 
     def write(self):
+        """
+        Writes the ``blockMeshDict``
+        """
         self.check()
 
         target = join(self.case.polyMeshDir(),"blockMeshDict")
@@ -141,6 +178,13 @@ class patch:
     """
     Representation of a blockMesh patch. Each patch consists one or multiple
     faces.
+
+    :param name: Name of the patch
+    :type name: string
+    :param faces: Faces the patch consists of
+    :type faces: list
+    :param type: Type of the patch (Default = ``patch``)
+    :type type: string
     """
     
     def __init__(
@@ -149,18 +193,8 @@ class patch:
                 faces,
                 type = "patch"
                 ):
-        """
-        :param name: Name of the patch
-        :type name: string
-        :param faces: Faces the patch consists of
-        :type faces: list
-        :param type: Type of the patch (Default = ``patch``)
-        :type type: string
-        """
-
         self.name = name
         self.type = type
-
         self.faces = faces
 
 
@@ -181,6 +215,29 @@ class patch:
 
 
 class block:
+    """
+    Representation of a block. A block consists of 8 vertices, but can be
+    constructed from two as well. If two are provided, they are used as a
+    bounding box.
+
+    :param points: Points to construct the block from (either 8 or 2)
+    :type points: list
+    :param nodes: Cells in each direction
+    :type nodes: dict
+    :param gradings: Grading in each direction
+    :type gradings: dict
+    :param verbose: More output (optional, default=`False`)
+    :type verbose: bool
+    :param noNodeAdjustment: Do not adjust the number of nodes, in order to
+        achieve a smooth transition (optional)
+    :param noGradingAdjustment: (optional)
+
+    All blocks are stored in the :attr:`.list` and are accessable in a global
+    manner, from all block instances. Each instances stores all 8 vertices
+    explicitely, but if the coordinates do already exist, they are marked as
+    being a duplicate. On construction, the faces and edges are generated
+    automatically and the adjoining neighbours are gathered as well.
+    """
 
     blockCount = -1
     """
@@ -227,6 +284,11 @@ class block:
             self.noGradingAdjustment = kwargs['noGradingAdjustment']
         except KeyError:
             self.noGradingAdjustment = False
+
+        try:
+            self.verbose = kwargs['verbose']
+        except KeyError:
+            self.verbose = False
 
         # Increase the global blockCount for the next block
         self.__class__.blockCount += 1
@@ -289,14 +351,16 @@ class block:
 
         # Create from 8 points
         if isinstance(points,list) and len(points) == 8:
-            print "Constructing block from 8 points"
+            if self.verbose:
+                print "Constructing block from 8 points"
             for pI in points:
                 self.checkDuplicateVertices(pI)
 
 
         # Create from bounding box
         elif isinstance(points,list) and len(points) == 2:
-            print "Constructing block from 2 points"
+            if self.verbose:
+                print "Constructing block from 2 points"
             for pI in boundingBox(points[0],points[1]):
                 self.checkDuplicateVertices(pI)
 
@@ -318,11 +382,21 @@ class block:
         return "Block ID: %i" %(self.id)
 
     def adjustGrading(self,referenceBlock,dir):
+        """
+        Adjusts the grading of the current block for a specific direction to
+        generate a smooth transition between the cell sizes.
+
+        :param referenceBlock: The reference block
+        :type referenceBlock: :class:`~block`
+        :param dir: Direction (0,1,2)
+        :type dir: int
+        """
         neighbour = -1
 
         for dirI,bI in self.neighbours.iteritems():
-            if self.list[bI] == referenceBlock:
-                neighbour = dirI
+            if not isinstance(bI,bool):
+                if self.list[bI] == referenceBlock:
+                    neighbour = dirI
                 
         if neighbour == -1:
             raise KeyError("The provided block is not a direct neighbour")
@@ -344,7 +418,7 @@ class block:
         dXOwn = lAverageOwn/self.nodes[dir]
 
         # Initialise start values
-        rRange = 1.0/numpy.arange(0.001,500,0.05)
+        rRange = 1.0/arange(0.001,500,0.05)
         rMin = 0.0
         r = 0.0
 
@@ -442,6 +516,9 @@ class block:
         it with the neighbouring blocks/edges. If the nodes are not identical, a
         ValueError is raised. The mismatch is fixed automatically, but can be
         overridden via a optional argument to the constructor of the block.
+
+        :param keepCurrent: Optional parameter to adjust the node numbers autmatically
+        :type keepCurrent: bool
         """
 
         # Initialise list with 0..2, representing all directions
@@ -499,7 +576,7 @@ class block:
         :rtype: int
         """
         out = -1
-        if id%2:
+        if bool(id%2):
             return id - 1
         else:
             return id + 1
@@ -584,6 +661,10 @@ class block:
         self.ownEdges.append(eTemp)
 
     def generateFaces(self):
+        """
+        Generates all 6 faces from the vertices of the block and stores them in
+        :meth:`.faces`
+        """
         # xmin face
         self.faces.append(face([
                                 self.ownVertices[4],
@@ -633,6 +714,10 @@ class block:
                                 ]))
 
     def generateEdges(self):
+        """
+        Generates all 12 edges from the vertices of the block and stores them in
+        :meth:`.edges`
+        """
         # Edge 0
         self.checkDuplicateEdges(
                                 self.ownVertices[0],
@@ -708,6 +793,16 @@ class block:
 
 
 class edge:
+    """
+    Representation of an edge
+
+    :param start: Start vertex
+    :type start: :class:`~vertex`
+    :param end: End vertex
+    :type end: :class:`~vertex`
+    :param type: Type of the edge (Default='line')
+    :type type: string
+    """
 
     edgeCount = 0
 
@@ -756,10 +851,10 @@ class edge:
         :rtype: float
         """
         if self.type == 'line':
-            return  math.sqrt(
-                            abs(self.start.x-self.end.x)**2 +
-                            abs(self.start.y-self.end.y)**2 +
-                            abs(self.start.z-self.end.z)**2
+            return  sqrt(
+                        abs(self.start.x-self.end.x)**2 +
+                        abs(self.start.y-self.end.y)**2 +
+                        abs(self.start.z-self.end.z)**2
                         )
 
     def lmbd(self,r,n,i=1):
@@ -794,13 +889,12 @@ class edge:
 class face:
     """
     Represents a face of a block, not a patch.
+
+    :param vertices: Vertices the face consists of
+    :type vertices: list
     """
 
     def __init__(self,vertices):
-        """
-        :param vertices: Vertices the face consists of
-        :type vertices: list
-        """
         self.vertices = vertices
 
         self.boundaryFace = True
@@ -808,6 +902,9 @@ class face:
         self.verticeIds = [vI.id for vI in self.vertices]
 
     def outputString(self):
+        """
+        Generates the string, that can be used in the `blockMeshDict`
+        """
         return "(%i %i %i %i)" %(self.vertices[0].id,
                                 self.vertices[1].id,
                                 self.vertices[2].id,
@@ -872,8 +969,12 @@ class vertex(Vector):
 
     def __init__(self, p):
         """
-        :param p: Coordinates of the vertex
-        :type p: tuple
+        :param x: x coordinate
+        :type x: float
+        :param y: y coordinate
+        :type y: float
+        :param z: z coordinate
+        :type z: float
         """
         # Ensure floats for the coordinates
         x = float(p[0])
