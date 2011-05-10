@@ -1,4 +1,5 @@
 from os.path import join
+from math import sqrt
 
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 
@@ -58,9 +59,11 @@ class initField():
         # Initialise k and epsilon
         self.k = 1.5*(self.uInf*self.I)**2
         self.epsilon = self.k**1.5/self.L
+        self.omega = sqrt(self.k)/(Constants.turbulence['Cmu']**(1/4)*self.L)
 
         self.vars['k'] = self.k
         self.vars['epsilon'] = self.epsilon
+        self.vars['omega'] = self.omega
 
 
     def __getitem__(self,key):
