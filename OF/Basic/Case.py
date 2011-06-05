@@ -35,6 +35,13 @@ class case(SolutionDirectory):
     :type: tuple
     """
 
+    forces = None
+    """
+    Stores the relative path to the forces.dat
+
+    :type: string
+    """
+
     def __init__(
                     self,
                     name,
@@ -72,3 +79,14 @@ class case(SolutionDirectory):
         self.inletVelocity = self.getDictionaryContents(self.first,'U')\
                             ['boundaryField'][self.inletPatch]['value'].val
                         
+        self.forces = self.getForcesPath()
+
+    def getForcesPath(self):
+        runTimeObj = None
+
+        for fI in listdir(self.name):
+            if fI in ("forces", "forcesFS", "resistance"):
+                runTimeObj = fI
+        
+        return join(runTimeObj,listdir(join(self.name,runTimeObj))[0],'%s.dat'
+                    %(runTimeObj))
