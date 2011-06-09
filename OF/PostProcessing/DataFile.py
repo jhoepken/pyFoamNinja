@@ -67,3 +67,29 @@ class dataFile():
         # Overwrite the file raw ASCII data with the numpy.array object that
         # is a result of the data mining. 
         self._fileData = numpy.array(parsedData)
+
+def element(times,target,absolute=False):
+    """
+    Finds and returns the array element number where the time is approximately
+    equal to the target. If no such time is found, the id of the last element is
+    returned.
+
+    :param times: All time values
+    :type times: numpy.array
+    :param target: The time for which the element id has to be found. If
+    relative is ``True``, it states the relative position inside the times.
+    :type target: float
+
+    :rtype: int
+    """
+    if not absolute:
+        targetTime = target*times[-1]
+    else:
+        targetTime = target
+    i = 0
+    for tI in times:
+        if tI >= targetTime:
+            return i
+        i += 1
+    return i
+

@@ -2,7 +2,7 @@ from distutils.core import setup
 
 import glob,os
 
-scriptlist = glob.glob('')
+scriptlist = glob.glob('bin/*.py')
 
 
 setup(name='OF',

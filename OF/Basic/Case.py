@@ -1,9 +1,13 @@
 from os import listdir
-from os.path import join
+from os.path import join,split
+from re import compile,findall
 
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 
 from OF import Settings
+from OF.PostProcessing import DataFile    
+from OF.NavalHydro import Resistance
+from OF.Basic import Utilities, FlowProperties
 
 class case(SolutionDirectory):
     """
@@ -12,6 +16,20 @@ class case(SolutionDirectory):
     properties from the case on initialisation.
 
     :Author: Jens Hoepken <jhoepken@gmail.com>
+    """
+
+    Re = 0.0
+    """
+    Stores the Reynoldsnumber
+
+    :type: float
+    """
+
+    Fr = 0.0
+    """
+    Stores the Froudenumber
+
+    :type: float
     """
 
     turbulenceModel = None
@@ -39,7 +57,50 @@ class case(SolutionDirectory):
     """
     Stores the relative path to the forces.dat
 
+    :type: OF.PostProcessing.DataFile
+    """
+
+    shortCasePath = None
+    """
+    Stores an abbreviated version of the case name, that is calculated from the
+    working directory.
+
     :type: string
+    """
+
+    CF = None
+    """
+    Stores the CF for each timestep
+
+    :type: numpy array
+    """
+
+    CT = None
+    """
+    Stores the CT for each timestep
+
+    :type: numpy array
+    """
+
+    RT = None
+    """
+    Stores the RT for each timestep
+
+    :type: numpy array
+    """
+
+    RF = None
+    """
+    Stores the RF for each timestep
+
+    :type: numpy array
+    """
+
+    t = None
+    """
+    Stores the time line for each timestep
+
+    :type: numpy array
     """
 
     def __init__(
@@ -71,22 +132,119 @@ class case(SolutionDirectory):
                                                 'RASProperties'
                                             )['RASModel']
 
+        ###############################
+        # Process optional parameters #
+        ###############################
         if 'inletPatch' in kwargs.iterkeys():
             self.inletPatch = kwargs['inletPatch']
         else:
             self.inletPatch = Settings.inletPatch
 
-        self.inletVelocity = self.getDictionaryContents(self.first,'U')\
-                            ['boundaryField'][self.inletPatch]['value'].val
-                        
-        self.forces = self.getForcesPath()
+        if 'L' in kwargs.iterkeys():
+            self.L = kwargs['L']
+        else:
+            self.L = 1.0
 
-    def getForcesPath(self):
+        if 'A' in kwargs.iterkeys():
+            self.A = kwargs['A']
+        else:
+            self.A = 1.0
+
+        if 'direction' in kwargs.iterkeys():
+            self.direction = kwargs['direction']
+        else:
+            self.direction = 1
+
+        self.updateInletVelocity()
+        self.forces = self.createDataFile()
+
+        try:
+            self.calculateCoeffs()
+        except TypeError:
+            pass
+        except ValueError:
+            pass
+
+        self.getShortCasePath()
+        self.shortCaseName = split(self.name)[1]
+
+
+    def calculateCoeffs(self):
+        """
+        If forces exist, the respective coefficients are calculated accordingly.
+        Otherwise a ValueError is raised.
+
+        :param L: Reference length
+        :type L: float
+        :param A: Reference area
+        :type A: float
+        """
+        uInf = Utilities.mag(self.inletVelocity)
+        self.Re = FlowProperties.Re(L=self.L,u=uInf)
+        self.Fr = FlowProperties.Fr(L=self.L,u=uInf)
+
+        if self.forces:
+            self.t = self.forces[0]
+            self.RF = abs(self.forces[self.direction+3])
+            self.RT = self.RF + abs(self.forces[self.direction])
+            self.CF = Resistance.forceCoeff(self.RF,self.A,u=uInf)
+            self.CT = Resistance.forceCoeff(self.RT,self.A,u=uInf)
+        else:
+            raise ValueError
+
+    def getShortCasePath(self):
+        out = []
+        for fI in self.name.split('/'):
+            if fI == 'run':
+                out.append(fI)
+            elif len(out) > 0:
+                out.append(fI)
+
+        self.shortCasePath = "/".join(out[1:])
+
+
+    def updateInletVelocity(self):
+        inletFound = False
+        with open(join(self.name,self.first,'U'),'r') as bc:
+            for line in bc:
+                if self.inletPatch in line:
+                    inletFound = True
+                if inletFound:
+                    if "uniform" in line:
+                        vIn = line
+                        break
+
+        numberRe = compile(r"[+-]? *(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?")
+        self.inletVelocity = [float(uI) for uI in findall(numberRe,vIn)]
+
+            #self.inletVelocity = self.getDictionaryContents(self.first,'U')\
+                        #['boundaryField'][self.inletPatch]['value'].val
+
+    def cloneCase(self,name,svnRemove=True,followSymlinks=False):
+        out = SolutionDirectory.cloneCase(
+                                    self,
+                                    name,
+                                    svnRemove=svnRemove,
+                                    followSymlinks=followSymlinks
+                                    )
+        out.inletPatch = self.inletPatch
+        out.updateInletVelocity()
+        return out
+
+    def createDataFile(self):
         runTimeObj = None
 
         for fI in listdir(self.name):
             if fI in ("forces", "forcesFS", "resistance"):
                 runTimeObj = fI
         
-        return join(runTimeObj,listdir(join(self.name,runTimeObj))[0],'%s.dat'
-                    %(runTimeObj))
+        if not runTimeObj:
+            return False
+        else:
+            path = join(
+                        self.name,
+                        runTimeObj,
+                        listdir(join(self.name,runTimeObj))[0],
+                        '%s.dat' %(runTimeObj)
+                        )
+            return DataFile.dataFile(path)
