@@ -49,16 +49,6 @@ def main():
                         via regular expressions."
                     )
     parser.add_option(
-                    "-U", "--velocity",
-                    action="store",
-                    dest="U",
-                    type="string",
-                    default="False",
-                    help="Velocity vector as a list \"[x,y,z]\". If nothing is\
-                        stated, a inlet patch needs to be specified. From that\
-                        patch, the velocity is read automatically."
-                    )
-    parser.add_option(
                     "-i", "--inlet",
                     action="store",
                     dest="inletPatch",
@@ -87,24 +77,33 @@ def main():
                     "-f",
                     action="store",
                     type="choice",
-                    choices=['1','2','3'],
+                    choices=['1','-1','2','-2','3','-3'],
                     dest="direction",
-                    default=1,
+                    default=-1,
                     help="Main flow direction (1=x,2=y,3=z). (default=1)"
+                    )
+    parser.add_option(
+                    "-d","--data",
+                    action="store",
+                    type="choice",
+                    choices=['CF','CT','RF','RT'],
+                    dest="dataToPlot",
+                    default='CF',
+                    help="Sets the data to be plotted. (default=CF)"
                     )
 
     group = OptionGroup(parser,"Flag Options")
     group.add_option(
                     "--without-ittc57",
                     action="store_true",
-                    dest="withIttc",
+                    dest="withoutIttc",
                     help="Do not print ITTC\'57 correlation line"
                     )
     group.add_option(
-                    "--without-cf-average",
+                    "--without-average",
                     action="store_true",
-                    dest="withoutCfAverage",
-                    help="Do not calculate the average of CF"
+                    dest="withoutAverage",
+                    help="Do not calculate the average of the data"
                     )
     parser.add_option_group(group)
 
@@ -161,7 +160,6 @@ def main():
     # is passed or a string with a 3D list in it.
     area = float(args[0])
     L = float(args[1])
-    U = eval(options.U)
 
     ############################ 
     # Variable initialisations #
@@ -178,7 +176,6 @@ def main():
                                                         "_F_",
                                                         Settings.floatPattern
                                                         )))
-                            
         for fI in listdir(getcwd()):
             if findall(casePattern,fI):
                 caseFolders.append(fI)
@@ -228,7 +225,11 @@ def main():
 
     plt.grid(True)
 
-    CFPlots = []
+    allPlots = []
+    # Create a list with all Reynoldsnumbers in it. This is needed for the
+    # decision, whether only one or multiple ITTC lines have to be plotted
+    Re = []
+    ReNumbers = len(list(set([cI.Re for cI in cases])))
     for cI in cases:
         startAtElement = DataFile.element(
                                         cI.t,
@@ -252,16 +253,16 @@ def main():
                                     options.averageEnd,
                                     options.withAbsolute
                                     )
-        ave = average(cI.CF[aveStart:aveEnd])
-        if not options.withoutCfAverage:
+        ave = average(cI.resistances[options.dataToPlot][aveStart:aveEnd])
+        if not options.withoutAverage:
             label = "%s (%.2e)" %(cI.shortCaseName,ave)
         else:
             label = cI.shortCaseName
 
-        CFPlots.append(
+        allPlots.append(
             ax1.plot(
                     cI.t[startAtElement:endAtElement],
-                    cI.CF[startAtElement:endAtElement],
+                    cI.resistances[options.dataToPlot][startAtElement:endAtElement],
                     '-',
                     label=label
             )
@@ -271,7 +272,7 @@ def main():
         # dataset and fill the area between the respective CF curve and the ITTC
         # line with the same color. Then the relative deviation between CF and
         # ITTC is annotated.
-        if not options.withIttc:
+        if not options.withoutIttc and options.dataToPlot == 'CF':
             ittcStart = DataFile.element(
                                         cI.t[startAtElement:endAtElement],
                                         options.ittcStart,
@@ -283,17 +284,31 @@ def main():
                                         options.ittcEnd,
                                         options.withAbsolute
                                         )
-            ittc57 = ones(len(cI.t))*\
-                    SkinFriction.ittc57(Re=cases[-1].Re)
+            ittc57 = ones(len(cI.t))*SkinFriction.ittc57(Re=cI.Re)
             ax1.fill_between(
                             cI.t[ittcStart:ittcEnd],
-                            cI.CF[ittcStart:ittcEnd],
+                            cI.resistances[options.dataToPlot][ittcStart:ittcEnd],
                             ittc57[ittcStart:ittcEnd],
-                            color=CFPlots[-1][0].get_color(),
+                            color=allPlots[-1][0].get_color(),
                             alpha=0.5
                             )
+            if not cI.Re in Re and ReNumbers > 1:
+                label='ITTC\'57 (%.2e)' %(ittc57[0])
+                allPlots.append(
+                    ax1.plot(
+                            cases[longestDataSet].t[startAtElement:endAtElement],
+                            ittc57[startAtElement:endAtElement],
+                            '--',
+                            color=allPlots[-1][0].get_color(),
+                            label=label
+                    )
+                )
 
-            deviationList = cI.CF*100.0/ittc57 - 100
+
+            # Compute the deviation of the current CF from the ITTC line and
+            # create a label inside the plot, that shows the relative deviation
+            # as a numerical value.
+            deviationList = cI.resistances[options.dataToPlot]*100.0/ittc57 - 100
             centerX = cI.t[int(ittcStart + (ittcEnd-ittcStart)/2)]
             centerY = min(ave,ittc57[0]) + (max(ave,ittc57[0])-min(ave,ittc57[0]))/2
             plt.text(
@@ -301,10 +316,13 @@ def main():
                 centerY,
                 '%.2f%%' %average(deviationList[ittcStart:ittcEnd])
                 )
+        # Finally append the current Reynoldsnumber to the global list of
+        # Reynoldsnumbers.
+        Re.append(cI.Re)
 
 
 
-    if not options.withIttc:
+    if not options.withoutIttc and options.dataToPlot == 'CF':
         ittc57 = ones(dataLengths[longestDataSet])*\
                 SkinFriction.ittc57(Re=cases[-1].Re)
         startAtElement = DataFile.element(
@@ -317,23 +335,21 @@ def main():
                             options.endAtTime,
                             True
                         )
-        if not options.withIttc:
+        if not options.withoutIttc and ReNumbers == 1:
             label='ITTC\'57 (%.2e)' %(ittc57[0])
-        else:
-            label='ITTC\'57'
-        CFPlots.append(
-            ax1.plot(
-                    cases[longestDataSet].t[startAtElement:endAtElement],
-                    ittc57[startAtElement:endAtElement],
-                    '--',
-                    color='black',
-                    label=label
+            allPlots.append(
+                ax1.plot(
+                        cases[longestDataSet].t[startAtElement:endAtElement],
+                        ittc57[startAtElement:endAtElement],
+                        '--',
+                        color='black',
+                        label=label
+                )
             )
-        )
 
 
     # Assemble all plots for a proper legend
-    lines = [pI[0] for pI in CFPlots]
+    lines = [pI[0] for pI in allPlots]
     labels = [l.get_label() for l in lines] 
     ax1.legend(
                 lines,

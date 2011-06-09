@@ -68,30 +68,11 @@ class case(SolutionDirectory):
     :type: string
     """
 
-    CF = None
+    resistances = {'CF':None,'CT':None,'RF':None,'RT':None}
     """
-    Stores the CF for each timestep
-
-    :type: numpy array
-    """
-
-    CT = None
-    """
-    Stores the CT for each timestep
-
-    :type: numpy array
-    """
-
-    RT = None
-    """
-    Stores the RT for each timestep
-
-    :type: numpy array
-    """
-
-    RF = None
-    """
-    Stores the RF for each timestep
+    Stores the forces and coefficients in the common naval architecture
+    notation, as a dict. The type is the key. 
+    resistances['CF'] = ..
 
     :type: numpy array
     """
@@ -125,6 +106,7 @@ class case(SolutionDirectory):
                                     parallel=parallel,
                                     region=region
                                     )
+        self.resistances = {'CF':None,'CT':None,'RF':None,'RT':None}
 
         # Get the used turbulence model
         self.turbulenceModel = self.getDictionaryContents(
@@ -153,7 +135,7 @@ class case(SolutionDirectory):
         if 'direction' in kwargs.iterkeys():
             self.direction = kwargs['direction']
         else:
-            self.direction = 1
+            self.direction = -1
 
         self.updateInletVelocity()
         self.forces = self.createDataFile()
@@ -185,10 +167,13 @@ class case(SolutionDirectory):
 
         if self.forces:
             self.t = self.forces[0]
-            self.RF = abs(self.forces[self.direction+3])
-            self.RT = self.RF + abs(self.forces[self.direction])
-            self.CF = Resistance.forceCoeff(self.RF,self.A,u=uInf)
-            self.CT = Resistance.forceCoeff(self.RT,self.A,u=uInf)
+            self.resistances['RF'] = self.direction*self.forces[abs(self.direction)+3]
+            self.resistances['RT'] = self.resistances['RF'] +\
+                                    self.direction*self.forces[abs(self.direction)]
+            self.resistances['CF'] = Resistance.forceCoeff(self.resistances['RF'],
+                                                        self.A,u=uInf)
+            self.resistances['CT'] = Resistance.forceCoeff(self.resistances['RT'],
+                                                        self.A,u=uInf)
         else:
             raise ValueError
 
