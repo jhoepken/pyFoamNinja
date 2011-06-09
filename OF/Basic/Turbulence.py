@@ -115,8 +115,8 @@ class initFieldFoam(initField):
             self.turbuBC = ['k','epsilon']
         elif self.case.turbulenceModel == 'kOmega':
             self.turbuBC = ['k','omega']
-        elif self.case.turbulenceModel == 'kOmegaSST':
-            self.turbuBC = ['k','epsilon','omega']
+        elif 'kOmegaSST' in self.case.turbulenceModel:
+            self.turbuBC = ['k','omega']
 
 
     def write(self):
