@@ -32,6 +32,8 @@ class case(SolutionDirectory):
     :type: float
     """
 
+    uInf = 0.0
+
     turbulenceModel = None
     """
     Stores the name of the employed turbulence model
@@ -161,9 +163,9 @@ class case(SolutionDirectory):
         :param A: Reference area
         :type A: float
         """
-        uInf = Utilities.mag(self.inletVelocity)
-        self.Re = FlowProperties.Re(L=self.L,u=uInf)
-        self.Fr = FlowProperties.Fr(L=self.L,u=uInf)
+        self.uInf = Utilities.mag(self.inletVelocity)
+        self.Re = FlowProperties.Re(L=self.L,u=self.uInf)
+        self.Fr = FlowProperties.Fr(L=self.L,u=self.uInf)
 
         if self.forces:
             self.t = self.forces[0]
@@ -171,9 +173,9 @@ class case(SolutionDirectory):
             self.resistances['RT'] = self.resistances['RF'] +\
                                     self.direction*self.forces[abs(self.direction)]
             self.resistances['CF'] = Resistance.forceCoeff(self.resistances['RF'],
-                                                        self.A,u=uInf)
+                                                        self.A,u=self.uInf)
             self.resistances['CT'] = Resistance.forceCoeff(self.resistances['RT'],
-                                                        self.A,u=uInf)
+                                                        self.A,u=self.uInf)
         else:
             raise ValueError
 
@@ -201,6 +203,10 @@ class case(SolutionDirectory):
 
         numberRe = compile(r"[+-]? *(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?")
         self.inletVelocity = [float(uI) for uI in findall(numberRe,vIn)]
+        self.uInf = Utilities.mag(self.inletVelocity)
+        self.Re = FlowProperties.Re(L=self.L,u=self.uInf)
+        self.Fr = FlowProperties.Fr(L=self.L,u=self.uInf)
+
 
             #self.inletVelocity = self.getDictionaryContents(self.first,'U')\
                         #['boundaryField'][self.inletPatch]['value'].val
