@@ -134,26 +134,27 @@ class initFieldFoam(initField):
         well.
         """
         for bcI in self.turbBC:
-            bcFile = ParsedParameterFile(
-                                        join(
-                                            self.case.name,
-                                            self.case.first,
-                                            bcI
+            for inletPatchI in self.case.inletPatch:
+                bcFile = ParsedParameterFile(
+                                            join(
+                                                self.case.name,
+                                                self.case.first,
+                                                bcI
+                                                )
                                             )
-                                        )
-            # Set the internal field and the inlet patch at first
-            bcFile['internalField'] = "uniform %f" %(self.vars[bcI])
-            bcFile['boundaryField'][self.case.inletPatch]['value'] = \
-                                            "uniform %f" %(self.vars[bcI])
+                # Set the internal field and the inlet patch at first
+                bcFile['internalField'] = "uniform %f" %(self.vars[bcI])
+                bcFile['boundaryField'][inletPatchI]['value'] = \
+                                                "uniform %f" %(self.vars[bcI])
 
-            # Update the wallfunctions if they are used
-            for patchI in bcFile['boundaryField']:
+                # Update the wallfunctions if they are used
+                for patchI in bcFile['boundaryField']:
 
-                if "allFunction" in bcFile['boundaryField'][patchI]['type']:
-                    bcFile['boundaryField'][patchI]['value'] = \
-                                            "uniform %f" %(self.vars[bcI])
+                    if "allFunction" in bcFile['boundaryField'][patchI]['type']:
+                        bcFile['boundaryField'][patchI]['value'] = \
+                                                "uniform %f" %(self.vars[bcI])
 
-            # Write the current boundary file
-            bcFile.writeFile()
+                # Write the current boundary file
+                bcFile.writeFile()
 
 

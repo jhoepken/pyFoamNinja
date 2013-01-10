@@ -8,7 +8,7 @@ from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 from OF import Settings
 from OF.PostProcessing import DataFile    
 from OF.NavalHydro import Resistance
-from OF.Basic import Utilities, FlowProperties
+from OF.Basic import Utilities, FlowProperties, Turbulence
 
 class case(SolutionDirectory):
     """
@@ -125,7 +125,7 @@ class case(SolutionDirectory):
             self.inletPatch = [kwargs['inletPatch']]
         else:
             # Detect the inlet patches automatically.
-            uBC = ParsedParameterFile(join(self.name,"0", "U"))
+            uBC = ParsedParameterFile(join(self.name,self.first, "U"))
             for patchI in uBC["boundaryField"]:
                 typeI = uBC['boundaryField'][patchI]['type']
                 try:
@@ -165,6 +165,13 @@ class case(SolutionDirectory):
         self.getShortCasePath()
         self.shortCaseName = split(self.name)[1]
 
+    def writeTurbulence(self, dh, u=None):
+        l = 0.07*dh
+        if not u:
+            t = Turbulence.initFieldFoam(self, self.uInf, l)
+        else:
+            t = Turbulence.initFieldFoam(self, u, l)
+        t.write()
 
     def calculateCoeffs(self):
         """
@@ -205,7 +212,7 @@ class case(SolutionDirectory):
 
     def updateInletVelocity(self):
         """
-        Updates the inlet velocity. This has to be done without
+        Reads and updates the inlet velocity. This has to be done without
         pyFoam, as this takes *ages* for a file with precalculated
         velocities.
         """
