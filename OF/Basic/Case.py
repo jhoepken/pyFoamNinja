@@ -3,6 +3,7 @@ from os.path import join,split
 from re import compile,findall
 
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
+from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 
 from OF import Settings
 from OF.PostProcessing import DataFile    
@@ -41,11 +42,12 @@ class case(SolutionDirectory):
     :type: string
     """
 
-    inletPatch = None
+    inletPatch = []
     """
-    Stores the name of the inlet patch
+    Stores the names of the inlet patches. There might be multiple,
+    for e.g. oblique flow.
 
-    :type: string
+    :type: []
     """
 
     inletVelocity = 0.0
@@ -120,9 +122,20 @@ class case(SolutionDirectory):
         # Process optional parameters #
         ###############################
         if 'inletPatch' in kwargs.iterkeys():
-            self.inletPatch = kwargs['inletPatch']
+            self.inletPatch = [kwargs['inletPatch']]
         else:
-            self.inletPatch = Settings.inletPatch
+            # Detect the inlet patches automatically.
+            uBC = ParsedParameterFile(join(self.name,"0", "U"))
+            for patchI in uBC["boundaryField"]:
+                typeI = uBC['boundaryField'][patchI]['type']
+                try:
+                    valueI = uBC['boundaryField'][patchI]['value'].value()
+                except KeyError:
+                    valueI = None
+                if typeI in Settings.inletPatchTypes and valueI > 0.0:
+                    self.inletPatch.append(patchI)
+
+            self.inletPatch = [Settings.inletPatch]
 
         if 'L' in kwargs.iterkeys():
             self.L = kwargs['L']
