@@ -26,7 +26,7 @@ class KnownValues(unittest.TestCase):
         Tests the conversion from velocity to Froude number
         """
         for vel,Froude in self.vFr:
-            result = FlowProperties.Fr(v=vel,L=1.0,nu=Constants.water['nu'])
+            result = FlowProperties.Fr(u=vel,L=1.0,nu=Constants.water['nu'])
             self.assertEqual(Froude, result)
 
     def testFrToVel(self):
@@ -42,7 +42,7 @@ class KnownValues(unittest.TestCase):
         Tests the conversion from velocity to Reynoldsnumber
         """
         for vel,Reynolds in self.vRe:
-            result = FlowProperties.Re(v=vel,L=1.0,nu=Constants.water['nu'])
+            result = FlowProperties.Re(u=vel,L=1.0,nu=Constants.water['nu'])
             self.assertEqual(Reynolds, result)
             
     def testReToVel(self):
