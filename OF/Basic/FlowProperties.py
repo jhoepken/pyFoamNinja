@@ -73,8 +73,11 @@ def Fr(**kwargs):
 
     :Author: Jens Hoepken <jhoepken@gmail.com>
     """
-    if 'u' in kwargs.iterkeys():
-        return kwargs['u']/sqrt(Constants.g*kwargs['L'])
+    if 'u' in kwargs.iterkeys() or 'v' in kwargs.iterkeys():
+        try:
+            return kwargs['u']/sqrt(Constants.g*kwargs['L'])
+        except KeyError:
+            return kwargs['v']/sqrt(Constants.g*kwargs['L'])
 
     elif 'Re' in kwargs.iterkeys():
         kwargs['u'] =  Re(**kwargs)
