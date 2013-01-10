@@ -204,15 +204,21 @@ class case(SolutionDirectory):
 
 
     def updateInletVelocity(self):
+        """
+        Updates the inlet velocity. This has to be done without
+        pyFoam, as this takes *ages* for a file with precalculated
+        velocities.
+        """
         inletFound = False
         with open(join(self.name,self.first,'U'),'r') as bc:
             for line in bc:
-                if self.inletPatch in line:
-                    inletFound = True
-                if inletFound:
-                    if "uniform" in line:
-                        vIn = line
-                        break
+                for patchI in self.inletPatch:
+                    if patchI in line:
+                        inletFound = True
+                    if inletFound:
+                        if "uniform" in line:
+                            vIn = line
+                            break
 
         numberRe = compile(r"[+-]? *(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?")
         self.inletVelocity = [float(uI) for uI in findall(numberRe,vIn)]
