@@ -1,6 +1,7 @@
 from math import log,sqrt
 
 from numpy import arange
+from numpy import log10
 
 from OF import Constants
 from OF.Basic import FlowProperties
@@ -43,7 +44,10 @@ def ittc57(**kwargs):
     else:
         u,Fr,Re = FlowProperties.uFrRe(**kwargs)
 
-    return 0.075/((log(Re,10)-2)**2)
+    try:
+        return 0.075/((log(Re,10)-2)**2)
+    except TypeError:
+        return 0.075/((log10(Re)-2)**2)
 
 def huges(**kwargs):
     """
