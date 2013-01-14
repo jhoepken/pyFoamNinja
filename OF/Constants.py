@@ -21,5 +21,6 @@ Properties of sweet water at :math:`T=20^\circ`
 """
 
 turbulence = {
-    'I' : 0.05
+    'I' : 0.05,
+    'Cmu': 0.09
     }

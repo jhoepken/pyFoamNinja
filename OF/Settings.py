@@ -8,3 +8,12 @@ Default name of the inlet patch.
 
 :type: string
 """
+
+inletPatchTypes = ('fixedValue', 'inletOutlet')
+
+floatPattern = r"[+-]? *(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?"
+"""
+Regexp pattern to match a float
+
+:type: string
+"""

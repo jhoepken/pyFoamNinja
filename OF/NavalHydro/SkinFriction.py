@@ -1,4 +1,8 @@
 from math import log,sqrt
+
+from numpy import arange
+from numpy import log10
+
 from OF import Constants
 from OF.Basic import FlowProperties
 """
@@ -26,8 +30,8 @@ def ittc57(**kwargs):
     :type Re: float
     :param Fr: Froudenumber
     :type Fr: float
-    :param v: Velocity :math:`[\\frac{m}{s}]`
-    :type v: float
+    :param u: Velocity :math:`[\\frac{m}{s}]`
+    :type u: float
     :param L: Reference length :math:`[m]`
     :type L: float
 
@@ -38,9 +42,12 @@ def ittc57(**kwargs):
     if 'Re' in kwargs.iterkeys():
         Re = kwargs['Re']
     else:
-        v,Fr,Re = FlowProperties.vFrRe(**kwargs)
+        u,Fr,Re = FlowProperties.uFrRe(**kwargs)
 
-    return 0.075/((log(Re)-2)**2)
+    try:
+        return 0.075/((log(Re,10)-2)**2)
+    except TypeError:
+        return 0.075/((log10(Re)-2)**2)
 
 def huges(**kwargs):
     """
@@ -62,8 +69,8 @@ def huges(**kwargs):
     :type Re: float
     :param Fr: Froudenumber
     :type Fr: float
-    :param v: Velocity :math:`[\\frac{m}{s}]`
-    :type v: float
+    :param u: Velocity :math:`[\\frac{m}{s}]`
+    :type u: float
     :param L: Reference length :math:`[m]`
     :type L: float
 
@@ -75,6 +82,48 @@ def huges(**kwargs):
     if 'Re' in kwargs.iterkeys():
         Re = kwargs['Re']
     else:
-        v,Fr,Re = FlowProperties.vFrRe(v=v,Fr=Fr,Re=Re,L=L,**kwargs)
+        u,Fr,Re = FlowProperties.uFrRe(**kwargs)
         
-    return 0.066/((log(Re)-2.03)**2)
+    return 0.066/((log(Re,10)-2.03)**2)
+
+def schoenherr(**kwargs):
+    """
+    Calculates the viscous drag coefficient :math:`C_{F0}` for the skin friction
+    according to the Schoenherr line.
+
+    ..math::
+
+        \\frac{0.242}{\sqrt{C_F}} = \log_{10} (C_F Re)
+
+    It is not necessary to hand a Reynoldsnumber to the function. If a velocity
+    or Froudenumber and a reference length is passed, the Reynoldsnumber is
+    derived accordingly.
+
+    :param Re: Reynoldsnumber
+    :type Re: float
+    :param Fr: Froudenumber
+    :type Fr: float
+    :param u: Velocity :math:`[\\frac{m}{s}]`
+    :type u: float
+    :param L: Reference length :math:`[m]`
+    :type L: float
+
+    :rtype: float
+
+    :Author: Jens Hoepken <jhoepken@gmail.com>
+    """
+    if 'Re' in kwargs.iterkeys():
+        Re = kwargs['Re']
+    else:
+        u,Fr,Re = FlowProperties.uFrRe(**kwargs)
+
+    iteration = 100.0
+
+    for CdI in arange(0.001,0.007,0.00001):
+        if abs(0.242/sqrt(CdI) - log(CdI*Re,10)) < iteration:
+            iteration = 0.242/sqrt(CdI) - log(CdI*Re,10)
+            Cd = CdI
+        else:
+            return Cd
+    return 0.0
+

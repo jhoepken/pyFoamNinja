@@ -1,4 +1,5 @@
 import numpy
+import re
 
 class dataFile():
     """
@@ -6,16 +7,17 @@ class dataFile():
     style, similar to the ``forces`` and ``forceCoeffs`` output.
 
     :Author: Jens Hoepken <jhoepken@gmail.com>
+    :Author: Tomislav Maric <tomislav.maric@gmx.com>
     """
 
-    path = None
+    _path = None
     """
     Path to the data file
 
     :type: string
     """
 
-    file = None
+    _fileData = None
     """
     Content of the file, read via :meth:`readlines()`
 
@@ -28,58 +30,66 @@ class dataFile():
         :type path: string
         """
 
-        self.path = path
+        self._path = path
 
         # Read the data file via readlines and store the content
-        tmpFile = open(path,"r")
-        self.file = tmpFile.readlines()
-        tmpFile.close()
-        del tmpFile
-
+        self._fileData = open(path,"r").readlines()
         self.parse()
 
     def __getitem__(self,key):
-        return numpy.array(self.file[key])
+        # Get the column data from the _fileData array.
+        return self._fileData[:,key]
 
     def parse(self):
         """
-        Strips all tabs, linebreaks and round brackets from the content and
-        rearranges it as a nested list. Each entry of the list represents a
-        column of the data file. If any line contains a sharp sign, the
-        line is skipped.
+        Uses regular expressions to extract a list of numbers from the lines in
+        the file. Skips all lines that start with a comment symbol.
         """
+        parsedData = []
 
-        data = False
+        # Regular expression for a number: integer, float, double with support
+        # for scientific notation.
+        numberRe = re.compile(r"[+-]? *(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?")
+        # Possible line comments.
+        lineComments = ("//", "%","#") 
 
-        blackList = [
-                        ")",
-                        "(",
-                        "\n",
-                        "\t"
-                    ]
+        for line in self._fileData:
+            # Remove the whitespace on the left of the line.
+            line = line.lstrip()
+            if not line.startswith(lineComments):
+                # re.findall returns a list of strings that are to be mapped
+                # into float values by the "map" builtin function.
+                # The result will be a list of numbers that are added to the
+                # data list.
+                parsedData.append(map(lambda number: float(number),
+                    re.findall(numberRe,line)));
 
-        lineCounter = 0
-        for line in self.file:
-            if not "#" in line: #lineCounter > 0:
-                
-                for bI in blackList:
-                    line = line.replace(bI,"")
+        # Overwrite the file raw ASCII data with the numpy.array object that
+        # is a result of the data mining. 
+        self._fileData = numpy.array(parsedData)
 
-                columns = line.split(" ")
+def element(times,target,absolute=False):
+    """
+    Finds and returns the array element number where the time is approximately
+    equal to the target. If no such time is found, the id of the last element is
+    returned.
 
-                if not data:
-                    data = columns
-                    i = 0
-                    while i < len(data):
-                        data[i] = [float(data[i])]
-                        i += 1
+    :param times: All time values
+    :type times: numpy.array
+    :param target: The time for which the element id has to be found. If
+    relative is ``True``, it states the relative position inside the times.
+    :type target: float
 
-                else:
-                    i = 0
-                    for cI in columns:
-                        data[i].append(float(cI))
-                        i += 1
+    :rtype: int
+    """
+    if not absolute:
+        targetTime = target*times[-1]
+    else:
+        targetTime = target
+    i = 0
+    for tI in times:
+        if tI >= targetTime:
+            return i
+        i += 1
+    return i
 
-            lineCounter += 1
-
-        self.file = data

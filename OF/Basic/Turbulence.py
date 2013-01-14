@@ -1,4 +1,5 @@
 from os.path import join
+from math import sqrt
 
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 
@@ -26,7 +27,7 @@ class initField():
     """
 
     uInf = 0
-    L = 0
+    l = 0
     k = 0
     epsilon = 0
     omega = 0
@@ -36,17 +37,17 @@ class initField():
     def __init__(
                 self,
                 uInf,
-                L,
+                l,
                 **kwargs
                 ):
         """
         :param uInf: Freestream velocity
         :type uInf: float
-        :param L: Reference length
-        :type L: float
+        :param l: Reference length (0.007*D_h)
+        :type l: float
         """
         self.uInf = uInf
-        self.L = L
+        self.l = l
         
         # Use the globally defined turbulent intensity, if no such parameter has
         # been passed.
@@ -55,12 +56,22 @@ class initField():
         except KeyError:
             self.I = Constants.turbulence['I']
 
-        # Initialise k and epsilon
+        ## Initialise k and epsilon
+        # Data gathered from fluent handbook for channel flows based
+        # on hydraulic diameter.
+
+        # Turbulent kinetic energy
         self.k = 1.5*(self.uInf*self.I)**2
-        self.epsilon = self.k**1.5/self.L
+
+        # Turbulent kinetic energy dissipation rate
+        self.epsilon = Constants.turbulence['Cmu']**(3.0/4.0)*(self.k**(3.0/2.0)/l)
+
+        # Turbulent frequency
+        self.omega = self.k**(1.0/2.0)/(Constants.turbulence['Cmu']**(1.0/4.0)*l)
 
         self.vars['k'] = self.k
         self.vars['epsilon'] = self.epsilon
+        self.vars['omega'] = self.omega
 
 
     def __getitem__(self,key):
@@ -84,7 +95,7 @@ class initFieldFoam(initField):
                 self,
                 case,
                 uInf,
-                L,
+                l,
                 **kwargs
                 ):
         """
@@ -93,27 +104,27 @@ class initFieldFoam(initField):
 
         :param uInf: Freestream velocity
         :type uInf: float
-        :param L: Reference length
-        :type L: float
+        :param l: Reference length
+        :type l: float
         """
 
         # Run parent constructor
         initField.__init__(
                             self,
                             uInf,
-                            L,
+                            l,
                             **kwargs
                             )
         self.case = case
 
         # Create a list of boundary files, that need to be set.
-        self.turbuBC = []
+        self.turbBC = []
         if self.case.turbulenceModel == 'kEpsilon':
-            self.turbuBC = ['k','epsilon']
+            self.turbBC = ['k','epsilon']
         elif self.case.turbulenceModel == 'kOmega':
-            self.turbuBC = ['k','omega']
-        elif self.case.turbulenceModel == 'kOmegaSST':
-            self.turbuBC = ['k','epsilon','omega']
+            self.turbBC = ['k','omega']
+        elif 'kOmegaSST' in self.case.turbulenceModel:
+            self.turbBC = ['k','omega']
 
 
     def write(self):
@@ -122,27 +133,28 @@ class initFieldFoam(initField):
         **turbulent** boundary files. Wallfunctions, if used, are updated as
         well.
         """
-        for bcI in self.turbuBC:
-            bcFile = ParsedParameterFile(
-                                        join(
-                                            self.case.name,
-                                            self.case.first,
-                                            bcI
+        for bcI in self.turbBC:
+            for inletPatchI in self.case.inletPatch:
+                bcFile = ParsedParameterFile(
+                                            join(
+                                                self.case.name,
+                                                self.case.first,
+                                                bcI
+                                                )
                                             )
-                                        )
-            # Set the internal field and the inlet patch at first
-            bcFile['internalField'] = "uniform %f" %(self.vars[bcI])
-            bcFile['boundaryField'][self.case.inletPatch]['value'] = \
-                                            "uniform %f" %(self.vars[bcI])
+                # Set the internal field and the inlet patch at first
+                bcFile['internalField'] = "uniform %f" %(self.vars[bcI])
+                bcFile['boundaryField'][inletPatchI]['value'] = \
+                                                "uniform %f" %(self.vars[bcI])
 
-            # Update the wallfunctions if they are used
-            for patchI in bcFile['boundaryField']:
+                # Update the wallfunctions if they are used
+                for patchI in bcFile['boundaryField']:
 
-                if "allFunction" in bcFile['boundaryField'][patchI]['type']:
-                    bcFile['boundaryField'][patchI]['value'] = \
-                                            "uniform %f" %(self.vars[bcI])
+                    if "allFunction" in bcFile['boundaryField'][patchI]['type']:
+                        bcFile['boundaryField'][patchI]['value'] = \
+                                                "uniform %f" %(self.vars[bcI])
 
-            # Write the current boundary file
-            bcFile.writeFile()
+                # Write the current boundary file
+                bcFile.writeFile()
 
 

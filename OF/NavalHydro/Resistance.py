@@ -9,7 +9,7 @@ on the velocity and the Froude number.
 
 def forceCoeff(F,
         Swett,
-        v=None,
+        u=None,
         Re=None,
         Fr=None,
         **kwargs):
@@ -18,14 +18,14 @@ def forceCoeff(F,
 
     ..math::
 
-        C = \\frac{F}{0.5\\rho S_{wett} v^2}
+        C = \\frac{F}{0.5\\rho S_{wett} u^2}
 
     :param F: Force
     :type F: float
     :param Swett: Wetted surface area
     :type Swett: float
-    :param v: Velocity
-    :type v: float
+    :param u: Velocity
+    :type u: float
     :param Re: Reynoldsnumber
     :type Re: float
     :param Fr: Froudenumber
@@ -42,11 +42,11 @@ def forceCoeff(F,
         rho = kwargs['rho']
 
     if Re:
-        v = FlowProperties.Re(Re=Re,L=kwargs['L'])
+        u = FlowProperties.Re(Re=Re,L=kwargs['L'])
     elif Fr:
-        v = FlowProperties.Fr(Fr=Fr,L=kwargs['L'])
+        u = FlowProperties.Fr(Fr=Fr,L=kwargs['L'])
 
 
-    return F/(0.5*rho*Swett*v**2)
+    return F/(0.5*rho*Swett*u**2)
 
 
