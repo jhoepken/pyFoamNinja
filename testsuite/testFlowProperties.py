@@ -29,7 +29,7 @@ class KnownValues(unittest.TestCase):
             (200.0, 63.855085681410088)
         )
 
-    # Known velocites and their respective Reynodls numbers for a reference length
+    # Known velocites and their respective Reynolds numbers for a reference length
     # of 1m, a gravity of 9.81 m/s**2 and a kinematic viscosity as defined in
     # the OF.Constants for water
     vRe = (
@@ -59,7 +59,7 @@ class KnownValues(unittest.TestCase):
         Tests the conversion from velocity to Reynoldsnumber
         """
         for vel,Reynolds in self.vRe:
-            result = FlowProperties.Re(v=vel,L=1.0,nu=Constants.water['nu'])
+            result = FlowProperties.Re(u=vel,L=1.0,nu=Constants.water['nu'])
             self.assertEqual(Reynolds, result)
             
     def testReToVel(self):
