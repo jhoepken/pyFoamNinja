@@ -34,7 +34,7 @@ class blockMesh:
     :param case: Case to create the ``blockMeshDict`` in
     :type case: SolutionDirectory
 
-    :Author: Jens Hoepken <jhoepken@gmail.com>,<jens.hoepken@uni-due.de>
+    :Author: Jens Hoepken <jhoepken@gmail.com>
     :Version: 1.0
     :Date: 03.03.2011
     """
