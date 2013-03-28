@@ -1,9 +1,26 @@
 #!/usr/bin/python
+#Copyright (C) 2013 Jens Hoepken
+
+#This program is free software; you can redistribute it and/or modify
+#it under the terms of the GNU General Public License as published by
+#the Free Software Foundation; either version 2 of the License, or
+#(at your option) any later version.
+
+#This program is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+#GNU General Public License for more details.
+
+#You should have received a copy of the GNU General Public License
+#along with this program; if not, write to the Free Software Foundation,
+#Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+
 
 from os import getcwd,path,makedirs
 from optparse import OptionParser,OptionGroup
 import math
-from numpy import linspace
+from numpy import linspace,array
 
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
@@ -40,6 +57,18 @@ def main(argv=None):
                     )
 
     parser.add_option(
+                    "-s", "--subpath",
+                    action="store",
+                    dest="subpath",
+                    type="string",
+                    default="",
+                    help="""Optional subpath. This should be used to sort custom
+parameter variations into the existing file structure.
+%mesh/(%subpath, optional)/%beta/%v
+"""
+                    )
+
+    parser.add_option(
                     "-b",
                     action="store",
                     dest="beta",
@@ -61,8 +90,8 @@ v=0 m/s will be neglected. (Default = 10)"""
                     "-u",
                     action="store",
                     dest="u",
-                    type="float",
-                    default=0.0,
+                    type="string",
+                    default="0.0",
                     help="Service speed in m/s (Default = 0.0m/s)"
                     )
     parser.add_option(
@@ -89,7 +118,11 @@ on the equations presented in the Fluent (R) handbook."""
 
     (options, args) = parser.parse_args()
 
-    v = linspace(0, options.u, options.steps + 1)[1:]
+    try:
+        u = float(options.u)
+        v = linspace(0, u, options.steps + 1)[1:]
+    except ValueError:
+        exec "v =  array(%s)" %options.u
 
     # Assemble the current working directory
     workingDir = path.join(getcwd(),options.mesh)
@@ -98,7 +131,10 @@ on the equations presented in the Fluent (R) handbook."""
     driftAngleName = "beta%.2f" %options.beta
 
     # Assemble the absolute path of the angle folder
-    driftAngleDirectory = path.join(workingDir,driftAngleName)
+    if not options.subpath:
+        driftAngleDirectory = path.join(workingDir,driftAngleName)
+    else:
+        driftAngleDirectory = path.join(workingDir,options.subpath,driftAngleName)
 
     # Check if the directory exists, that should store the cases for the current
     # drift angle.
@@ -129,7 +165,7 @@ on the equations presented in the Fluent (R) handbook."""
         # Rotate the velocity vector around z axis, according to the specified
         # drift angle.
         U = Vector(
-                -1.0*vI*math.cos(math.radians(options.beta)),
+                vI*math.cos(math.radians(options.beta)),
                 vI*math.sin(math.radians(options.beta)),
                 0
                 )

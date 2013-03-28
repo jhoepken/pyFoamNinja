@@ -1,3 +1,21 @@
+#!/usr/bin/env python
+#Copyright (C) 2013 Jens Hoepken
+
+#This program is free software; you can redistribute it and/or modify
+#it under the terms of the GNU General Public License as published by
+#the Free Software Foundation; either version 2 of the License, or
+#(at your option) any later version.
+
+#This program is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+#GNU General Public License for more details.
+
+#You should have received a copy of the GNU General Public License
+#along with this program; if not, write to the Free Software Foundation,
+#Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+
 import unittest
 from OF import Constants
 from OF.Basic import FlowProperties
@@ -12,7 +30,7 @@ class KnownValues(unittest.TestCase):
             (200.0, 63.855085681410088)
         )
 
-    # Known velocites and their respective Reynodls numbers for a reference length
+    # Known velocites and their respective Reynolds numbers for a reference length
     # of 1m, a gravity of 9.81 m/s**2 and a kinematic viscosity as defined in
     # the OF.Constants for water
     vRe = (
@@ -42,7 +60,7 @@ class KnownValues(unittest.TestCase):
         Tests the conversion from velocity to Reynoldsnumber
         """
         for vel,Reynolds in self.vRe:
-            result = FlowProperties.Re(v=vel,L=1.0,nu=Constants.water['nu'])
+            result = FlowProperties.Re(u=vel,L=1.0,nu=Constants.water['nu'])
             self.assertEqual(Reynolds, result)
             
     def testReToVel(self):
