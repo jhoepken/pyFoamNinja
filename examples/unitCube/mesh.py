@@ -32,7 +32,13 @@ block0 = BM.block(points0, nodes=[cells, cells, cells], gradings=[1,1,1])
 # be passed as an optional argument.
 outside = BM.patch("OUTSIDE", [block0.faces[i] for i in range(0,6)])
 
+# Initialise a BlockMesh instance that only need a SolutionDirectory for
+# construction.
 mesh = BM.blockMesh(case)
+
+# All blocks and patches must get added to the mesh
 mesh.addBlocks([block0])
 mesh.addPatches([outside])
+
+# Writes the blockMeshDict
 mesh.write() 
