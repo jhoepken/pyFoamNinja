@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from os.path import getcwd
+from os import getcwd
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 from Mesher import BlockMesh as BM
 
@@ -25,6 +25,11 @@ points0 = BM.boundingBox(
 # We can pass a point list, cells/nodes+1 in all three directions as well as
 # the respective edge grading to the constructor of a block.
 block0 = BM.block(points0, nodes=[cells, cells, cells], gradings=[1,1,1])
+
+# Though it makes no real sense for this example, we can generate patches from
+# the boundary faces of a block, just as known from blockMesh itself. The patch
+# class takes a name and a list of faces as required arguments and the type can
+# be passed as an optional argument.
 outside = BM.patch("OUTSIDE", [block0.faces[i] for i in range(0,6)])
 
 mesh = BM.blockMesh(case)
