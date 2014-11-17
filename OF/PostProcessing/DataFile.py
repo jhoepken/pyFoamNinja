@@ -50,7 +50,7 @@ class dataFile():
         self._path = path
 
         # Read the data file via readlines and store the content
-        self._fileData = open(path,"r").readlines()
+        self._fileData = list(open(path,"r").read().splitlines())
         self.parse()
 
     def __getitem__(self,key):
@@ -72,14 +72,14 @@ class dataFile():
 
         for line in self._fileData:
             # Remove the whitespace on the left of the line.
-            line = line.lstrip()
+            line = str(line).lstrip()
             if not line.startswith(lineComments):
                 # re.findall returns a list of strings that are to be mapped
                 # into float values by the "map" builtin function.
                 # The result will be a list of numbers that are added to the
                 # data list.
-                parsedData.append(map(lambda number: float(number),
-                    re.findall(numberRe,line)));
+                parsedData.append(list(map(lambda number: float(number),
+                    re.findall(numberRe,str(line)))));
 
         # Overwrite the file raw ASCII data with the numpy.array object that
         # is a result of the data mining. 
